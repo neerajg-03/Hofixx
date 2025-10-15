@@ -1,0 +1,520 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<style>
+/* User Dashboard Custom Styles */
+.rating-stars .star {
+  cursor: pointer;
+  transition: color 0.2s ease;
+  margin: 0 2px;
+}
+
+.rating-stars .star:hover {
+  color: #ffc107 !important;
+}
+
+.service-mini-card {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+.service-mini-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+}
+
+.service-icon-small {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.2));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin: 0 auto;
+}
+
+.stat-card {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.2));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.provider-popup {
+  min-width: 200px;
+}
+
+.provider-popup .rating {
+  font-size: 0.9rem;
+}
+
+.provider-popup .skills .badge {
+  font-size: 0.7rem;
+  padding: 0.25em 0.5em;
+}
+
+/* Notification styles */
+.alert {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: none;
+}
+
+/* Table improvements */
+.table-hover tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Button improvements */
+.btn-group-sm .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Map improvements */
+#map {
+  border-radius: 0 0 1rem 1rem;
+}
+
+/* Loading state */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .stat-card {
+    margin-bottom: 1rem;
+  }
+  
+  .service-mini-card {
+    margin-bottom: 1rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid px-0">
+  <!-- Welcome Header -->
+  <section class="py-4 bg-gradient-primary text-white">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <div class="d-flex align-items-center mb-3">
+            <div class="welcome-avatar me-3">
+              <img id="userAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User&backgroundColor=b6e3f4" 
+                   class="rounded-circle" width="60" alt="User Avatar">
+            </div>
+            <div>
+              <h2 class="mb-1 fw-bold">Welcome back!</h2>
+              <p class="mb-0 text-white-50">Discover services and manage your bookings</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+          <a href="/booking-map" class="btn btn-light btn-lg px-4 py-3 rounded-pill shadow-lg hover-lift">
+            <i class="fas fa-plus me-2"></i>Book New Service
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Stats -->
+  <section class="py-4 bg-white">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-3 col-md-6">
+          <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-0 text-center hover-lift">
+            <div class="stat-icon mx-auto mb-3">
+              <i class="fas fa-calendar-check text-primary"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-primary" id="totalBookings">0</h3>
+            <p class="text-muted mb-0 small">Total Bookings</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-0 text-center hover-lift">
+            <div class="stat-icon mx-auto mb-3">
+              <i class="fas fa-clock text-success"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-success" id="activeBookings">0</h3>
+            <p class="text-muted mb-0 small">Active Bookings</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-0 text-center hover-lift">
+            <div class="stat-icon mx-auto mb-3">
+              <i class="fas fa-star text-warning"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-warning" id="averageRating">5.0</h3>
+            <p class="text-muted mb-0 small">Avg Rating Given</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-0 text-center hover-lift">
+            <div class="stat-icon mx-auto mb-3">
+              <i class="fas fa-rupee-sign text-info"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-info" id="totalSpent">₹0</h3>
+            <p class="text-muted mb-0 small">Total Spent</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Actions & Services -->
+  <section class="py-4 bg-light">
+    <div class="container">
+      <div class="row g-4">
+        <!-- Quick Actions -->
+        <div class="col-lg-4">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <h5 class="fw-bold mb-3">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-grid gap-3">
+                <a href="/booking-map" class="btn btn-primary rounded-pill py-3">
+                  <i class="fas fa-map-marker-alt me-2"></i>Find Nearby Providers
+                </a>
+                <a href="/create-service-request" class="btn btn-success rounded-pill py-3">
+                  <i class="fas fa-quote-left me-2"></i>Request Quotes
+                </a>
+                <a href="/services" class="btn btn-outline-primary rounded-pill py-3">
+                  <i class="fas fa-list me-2"></i>Browse All Services
+                </a>
+                <a href="/profile" class="btn btn-outline-secondary rounded-pill py-3">
+                  <i class="fas fa-user-edit me-2"></i>Update Profile
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popular Services -->
+        <div class="col-lg-8">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">Popular Services</h5>
+                <a href="/services" class="btn btn-sm btn-outline-primary">View All</a>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="popularServices" class="row g-3">
+                <!-- Services will be loaded here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent Bookings & Map -->
+  <section class="py-4 bg-white">
+    <div class="container">
+      <div class="row g-4">
+        <!-- Recent Bookings -->
+        <div class="col-lg-8">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">Recent Bookings</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                  <input type="radio" class="btn-check" name="bookingFilter" id="allBookings" autocomplete="off" checked>
+                  <label class="btn btn-outline-primary" for="allBookings">All</label>
+                  
+                  <input type="radio" class="btn-check" name="bookingFilter" id="activeBookings" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="activeBookings">Active</label>
+                  
+                  <input type="radio" class="btn-check" name="bookingFilter" id="completedBookings" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="completedBookings">Completed</label>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0" id="userBookingsTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Service</th>
+                      <th>Provider</th>
+                      <th>Status</th>
+                      <th>Price</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr id="loadingRow">
+                      <td colspan="6" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="mt-2">Loading bookings...</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Map & Location -->
+        <div class="col-lg-4">
+          <div class="card shadow-sm rounded-4 border-0 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">Nearby Providers</h5>
+                <button id="refreshProviders" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div id="map" style="height: 400px; border-radius: 0 0 1rem 1rem;"></div>
+              <div class="p-3 bg-light">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                  <span class="text-muted small" id="locationStatus">Getting your location...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Service Requests & Notifications -->
+  <section class="py-4 bg-light">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">My Service Requests</h5>
+                <a href="/create-service-request" class="btn btn-sm btn-outline-success">
+                  <i class="fas fa-plus me-1"></i>New Request
+                </a>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="serviceRequestsList">
+                <div class="text-center py-3">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <div class="mt-2">Loading service requests...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <h5 class="fw-bold mb-0">Notifications</h5>
+            </div>
+            <div class="card-body">
+              <div id="notificationsList">
+                <!-- Notifications will be loaded here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tips & Recommendations -->
+  <section class="py-4 bg-white">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <h5 class="fw-bold mb-0">Tips & Recommendations</h5>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="tip-item d-flex align-items-start">
+                    <div class="tip-icon me-3">
+                      <i class="fas fa-lightbulb text-warning"></i>
+                    </div>
+                    <div>
+                      <h6 class="mb-1">Request Quotes</h6>
+                      <p class="text-muted small mb-0">Get multiple quotes from providers to compare prices and services.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="tip-item d-flex align-items-start">
+                    <div class="tip-icon me-3">
+                      <i class="fas fa-star text-warning"></i>
+                    </div>
+                    <div>
+                      <h6 class="mb-1">Rate Your Experience</h6>
+                      <p class="text-muted small mb-0">Help other users by rating your service experience.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="tip-item d-flex align-items-start">
+                    <div class="tip-icon me-3">
+                      <i class="fas fa-shield-alt text-success"></i>
+                    </div>
+                    <div>
+                      <h6 class="mb-1">Verified Providers</h6>
+                      <p class="text-muted small mb-0">All our providers are background verified for your safety.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='js/user_dashboard.js') }}"></script>
+<script>
+// Load service requests for dashboard
+async function loadServiceRequests() {
+  try {
+    const response = await fetch('/api/user/service-requests', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      displayServiceRequests(data.service_requests);
+    } else {
+      console.error('Failed to load service requests');
+    }
+  } catch (error) {
+    console.error('Error loading service requests:', error);
+  }
+}
+
+// Display service requests
+function displayServiceRequests(requests) {
+  const requestsDiv = document.getElementById('serviceRequestsList');
+  
+  if (requests.length === 0) {
+    requestsDiv.innerHTML = `
+      <div class="text-center py-3">
+        <i class="fas fa-quote-left fa-2x text-muted mb-2"></i>
+        <p class="text-muted mb-0">No service requests yet</p>
+        <a href="/create-service-request" class="btn btn-sm btn-primary mt-2">
+          <i class="fas fa-plus me-1"></i>Create First Request
+        </a>
+      </div>
+    `;
+    return;
+  }
+  
+  requestsDiv.innerHTML = requests.map(req => {
+    const urgencyColors = {
+      'emergency': 'danger',
+      'urgent': 'warning',
+      'normal': 'primary',
+      'flexible': 'secondary'
+    };
+    
+    const statusColors = {
+      'open': 'success',
+      'quotes_received': 'warning',
+      'quote_selected': 'info',
+      'completed': 'primary',
+      'cancelled': 'secondary'
+    };
+    
+    return `
+      <div class="service-request-item border-bottom pb-2 mb-2">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center mb-1">
+              <span class="badge bg-${urgencyColors[req.urgency]} me-2">
+                ${req.urgency.toUpperCase()}
+              </span>
+              <span class="badge bg-${statusColors[req.status]}">
+                ${req.status.replace('_', ' ').toUpperCase()}
+              </span>
+            </div>
+            <h6 class="mb-1">${req.title}</h6>
+            <p class="mb-1 small text-muted">
+              <i class="fas fa-map-marker-alt me-1"></i>
+              ${req.location}
+            </p>
+            <div class="small text-muted">
+              <i class="fas fa-clock me-1"></i>
+              ${new Date(req.created_at).toLocaleDateString()}
+              ${req.has_quotes ? ` • ${req.quote_count} quote${req.quote_count !== 1 ? 's' : ''}` : ''}
+            </div>
+          </div>
+          <div class="text-end">
+            ${req.status === 'quotes_received' ? `
+            <a href="/service-request/${req.id}/quotes" class="btn btn-sm btn-primary">
+              <i class="fas fa-eye me-1"></i>View Quotes
+            </a>
+            ` : req.status === 'open' ? `
+            <a href="/service-request/${req.id}/quotes" class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-eye me-1"></i>View Request
+            </a>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Load service requests when dashboard loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadServiceRequests();
+});
+</script>
+{% endblock %}

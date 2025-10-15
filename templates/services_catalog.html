@@ -1,0 +1,615 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<style>
+/* Services Page Custom Styles */
+.services-hero-card {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.service-card, .service-card-list, .popular-service-card {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0,0,0,0.05) !important;
+}
+
+.service-card:hover, .service-card-list:hover, .popular-service-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+  border-color: rgba(13, 110, 253, 0.2) !important;
+}
+
+.service-icon-wrapper {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.2));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin: 0 auto;
+}
+
+.service-card .service-icon-wrapper {
+  margin: 0;
+}
+
+.search-box .input-group {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border-radius: 50px;
+  overflow: hidden;
+}
+
+.search-box .input-group-text {
+  background: #f8f9fa;
+  border: none;
+  padding: 12px 16px;
+}
+
+.search-box .form-control {
+  border: none;
+  padding: 12px 16px;
+  background: #f8f9fa;
+}
+
+.search-box .form-control:focus {
+  box-shadow: none;
+  background: white;
+}
+
+/* Grid vs List View Styles */
+.service-card-list {
+  transition: all 0.3s ease;
+}
+
+.service-card-list:hover {
+  transform: translateY(-2px);
+}
+
+/* Popular Services */
+.popular-service-card {
+  transition: all 0.3s ease;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.popular-service-card .service-icon-wrapper {
+  width: 50px;
+  height: 50px;
+  font-size: 1.25rem;
+}
+
+/* Loading and Error States */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .service-card-list .row {
+    text-align: center;
+  }
+  
+  .service-card-list .col-md-4 {
+    margin-top: 1rem;
+  }
+  
+  .service-card-list .d-flex.flex-column {
+    flex-direction: row !important;
+    gap: 0.5rem;
+  }
+  
+  .service-card-list .btn {
+    flex: 1;
+  }
+}
+
+/* Animation Enhancements */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.service-card, .service-card-list, .popular-service-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Badge Styling */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.35em 0.65em;
+}
+
+/* Button Enhancements */
+.btn.rounded-pill {
+  padding: 0.5rem 1.5rem;
+  font-weight: 500;
+}
+
+.btn-outline-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid px-0">
+  <!-- Hero Section -->
+  <section class="py-5 bg-gradient-primary text-white">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <h1 class="display-4 fw-bold mb-3">Professional Home Services</h1>
+          <p class="lead mb-4">Get instant access to verified experts for all your home maintenance needs. Book now and get your home fixed today!</p>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-shield-alt text-warning me-2"></i>
+              <span class="small">Verified Professionals</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="fas fa-clock text-warning me-2"></i>
+              <span class="small">Same Day Service</span>
+            </div>
+            <div class="d-flex align-items-center">
+              <i class="fas fa-star text-warning me-2"></i>
+              <span class="small">5-Star Rated</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="services-hero-card p-4 rounded-4 bg-white bg-opacity-10 border border-white border-opacity-25">
+            <h5 class="fw-bold mb-3">Quick Book</h5>
+            <p class="small mb-3">Need service right away?</p>
+            <a href="/booking-map" class="btn btn-light btn-lg w-100 rounded-pill">
+              <i class="fas fa-bolt me-2"></i>Emergency Service
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Search and Filter Section -->
+  <section class="py-4 bg-white border-bottom">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-6">
+          <div class="search-box">
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0">
+                <i class="fas fa-search text-muted"></i>
+              </span>
+              <input type="text" class="form-control border-start-0" id="serviceSearch" placeholder="Search services...">
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="d-flex align-items-center justify-content-lg-end gap-3">
+            <div class="d-flex align-items-center">
+              <label class="form-label mb-0 me-2 small fw-semibold">Category:</label>
+              <select class="form-select form-select-sm" id="categoryFilter" style="width: auto;">
+                <option value="">All Categories</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Plumbing">Plumbing</option>
+                <option value="Woodwork">Woodwork</option>
+                <option value="Cleaning">Cleaning</option>
+                <option value="Painting">Painting</option>
+                <option value="Landscaping">Landscaping</option>
+                <option value="Security">Security</option>
+                <option value="Heating & Cooling">Heating & Cooling</option>
+              </select>
+            </div>
+            <div class="text-muted small">
+              <span id="serviceCount">0</span> services found
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Grid -->
+  <section class="py-5">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <div class="d-flex align-items-center justify-content-between mb-4">
+            <h2 class="fw-bold text-dark mb-0">Available Services</h2>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-primary btn-sm" id="gridViewBtn" title="Grid View">
+                <i class="fas fa-th"></i>
+              </button>
+              <button class="btn btn-outline-secondary btn-sm" id="listViewBtn" title="List View">
+                <i class="fas fa-list"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Loading State -->
+      <div id="loadingServices" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted small mt-2">Loading services...</p>
+      </div>
+      
+      <!-- Services Grid -->
+      <div id="servicesGrid" class="row g-4"></div>
+      
+      <!-- No Services State -->
+      <div id="noServices" class="text-center py-5 d-none">
+        <div class="mb-3">
+          <i class="fas fa-search text-muted" style="font-size: 3rem;"></i>
+        </div>
+        <h5 class="text-muted">No services found</h5>
+        <p class="text-muted">Try adjusting your search or filters</p>
+        <button class="btn btn-outline-primary" onclick="clearFilters()">Clear Filters</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Popular Services Section -->
+  <section class="py-5 bg-light">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 mx-auto text-center mb-5">
+          <h2 class="fw-bold mb-3">Most Popular Services</h2>
+          <p class="text-muted">These are our most requested services by customers</p>
+        </div>
+      </div>
+      <div id="popularServices" class="row g-3"></div>
+    </div>
+  </section>
+
+  <!-- Why Choose Us Section -->
+  <section class="py-5 bg-white">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 mx-auto text-center mb-5">
+          <h2 class="fw-bold mb-3">Why Choose Hofix?</h2>
+          <p class="text-muted">We make home maintenance simple, reliable, and affordable</p>
+        </div>
+      </div>
+      <div class="row g-4">
+        <div class="col-lg-3 col-md-6">
+          <div class="text-center">
+            <div class="service-icon-wrapper mx-auto mb-3">
+              <i class="fas fa-shield-alt text-primary"></i>
+            </div>
+            <h6 class="fw-bold mb-2">Verified Professionals</h6>
+            <p class="text-muted small">All our service providers are background-checked and verified</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="text-center">
+            <div class="service-icon-wrapper mx-auto mb-3">
+              <i class="fas fa-clock text-primary"></i>
+            </div>
+            <h6 class="fw-bold mb-2">Same Day Service</h6>
+            <p class="text-muted small">Most services can be completed on the same day</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="text-center">
+            <div class="service-icon-wrapper mx-auto mb-3">
+              <i class="fas fa-dollar-sign text-primary"></i>
+            </div>
+            <h6 class="fw-bold mb-2">Transparent Pricing</h6>
+            <p class="text-muted small">No hidden fees, upfront pricing for all services</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="text-center">
+            <div class="service-icon-wrapper mx-auto mb-3">
+              <i class="fas fa-star text-primary"></i>
+            </div>
+            <h6 class="fw-bold mb-2">Quality Guaranteed</h6>
+            <p class="text-muted small">100% satisfaction guarantee on all our services</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// Service icons mapping
+const serviceIcons = {
+  'Electrician': 'fas fa-bolt',
+  'Plumber': 'fas fa-wrench',
+  'Carpenter': 'fas fa-hammer',
+  'Cleaner': 'fas fa-broom',
+  'Painter': 'fas fa-paint-brush',
+  'Gardener': 'fas fa-seedling',
+  'Locksmith': 'fas fa-key',
+  'HVAC Technician': 'fas fa-snowflake',
+  'Electrical': 'fas fa-bolt',
+  'Plumbing': 'fas fa-wrench',
+  'Woodwork': 'fas fa-hammer',
+  'Cleaning': 'fas fa-broom',
+  'Painting': 'fas fa-paint-brush',
+  'Landscaping': 'fas fa-seedling',
+  'Security': 'fas fa-key',
+  'Heating & Cooling': 'fas fa-snowflake'
+};
+
+// Popular services (will be dynamically determined)
+let popularServices = [];
+
+// Global variables
+let allServices = [];
+let filteredServices = [];
+let currentView = 'grid';
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+  loadServices();
+  setupEventListeners();
+});
+
+// Setup event listeners
+function setupEventListeners() {
+  // Search functionality
+  const searchInput = document.getElementById('serviceSearch');
+  searchInput.addEventListener('input', debounce(filterServices, 300));
+
+  // Category filter
+  const categoryFilter = document.getElementById('categoryFilter');
+  categoryFilter.addEventListener('change', filterServices);
+
+  // View toggle
+  document.getElementById('gridViewBtn').addEventListener('click', () => switchView('grid'));
+  document.getElementById('listViewBtn').addEventListener('click', () => switchView('list'));
+}
+
+// Load services from API
+async function loadServices() {
+  try {
+    showLoading();
+    const response = await fetch('/api/services');
+    const services = await response.json();
+    
+    allServices = Array.isArray(services) ? services : [];
+    filteredServices = [...allServices];
+    
+    // Determine popular services (top 4 by base price)
+    popularServices = allServices
+      .sort((a, b) => (b.base_price || 0) - (a.base_price || 0))
+      .slice(0, 4);
+    
+    renderServices();
+    renderPopularServices();
+    updateServiceCount();
+    
+  } catch (error) {
+    console.error('Error loading services:', error);
+    showError('Error loading services. Please try again.');
+  }
+}
+
+// Show loading state
+function showLoading() {
+  document.getElementById('loadingServices').classList.remove('d-none');
+  document.getElementById('servicesGrid').innerHTML = '';
+  document.getElementById('noServices').classList.add('d-none');
+}
+
+// Show error state
+function showError(message) {
+  document.getElementById('loadingServices').classList.add('d-none');
+  document.getElementById('servicesGrid').innerHTML = `
+    <div class="col-12 text-center py-5">
+      <div class="mb-3">
+        <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+      </div>
+      <h5 class="text-muted">${message}</h5>
+      <button class="btn btn-primary" onclick="loadServices()">Try Again</button>
+    </div>`;
+  document.getElementById('noServices').classList.add('d-none');
+}
+
+// Filter services based on search and category
+function filterServices() {
+  const searchTerm = document.getElementById('serviceSearch').value.toLowerCase();
+  const categoryFilter = document.getElementById('categoryFilter').value;
+  
+  filteredServices = allServices.filter(service => {
+    const matchesSearch = !searchTerm || 
+      service.name.toLowerCase().includes(searchTerm) ||
+      (service.category && service.category.toLowerCase().includes(searchTerm)) ||
+      (service.description && service.description.toLowerCase().includes(searchTerm));
+    
+    const matchesCategory = !categoryFilter || 
+      service.category === categoryFilter ||
+      service.name.toLowerCase().includes(categoryFilter.toLowerCase());
+    
+    return matchesSearch && matchesCategory;
+  });
+  
+  renderServices();
+  updateServiceCount();
+}
+
+// Render services in current view
+function renderServices() {
+  const grid = document.getElementById('servicesGrid');
+  const noServices = document.getElementById('noServices');
+  
+  document.getElementById('loadingServices').classList.add('d-none');
+  
+  if (filteredServices.length === 0) {
+    grid.innerHTML = '';
+    noServices.classList.remove('d-none');
+    return;
+  }
+
+  noServices.classList.add('d-none');
+  grid.innerHTML = '';
+
+  filteredServices.forEach((service, index) => {
+    const serviceCard = createServiceCard(service, index);
+    grid.appendChild(serviceCard);
+  });
+}
+
+// Create service card element
+function createServiceCard(service, index) {
+  const icon = serviceIcons[service.name] || serviceIcons[service.category] || 'fas fa-tools';
+  const col = document.createElement('div');
+  
+  if (currentView === 'list') {
+    col.className = 'col-12';
+    col.innerHTML = `
+      <div class="service-card-list h-100 p-4 rounded-4 shadow-sm bg-white border-0 hover-lift" data-aos="fade-up" data-aos-delay="${index * 50}">
+        <div class="row align-items-center">
+          <div class="col-md-2 text-center">
+            <div class="service-icon-wrapper mb-3 mb-md-0">
+              <i class="${icon} text-primary" style="font-size: 2rem;"></i>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h5 class="fw-bold mb-2">${service.name}</h5>
+            <p class="text-muted small mb-2">${service.category || 'Professional Service'}</p>
+            <div class="d-flex align-items-center gap-3">
+              <span class="text-primary fw-bold">From ₹${Number(service.base_price || 0).toFixed(0)}</span>
+              <span class="badge bg-light text-dark">Available</span>
+            </div>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <div class="d-flex flex-column gap-2">
+              <a href="/booking-map?service_id=${service.id}" class="btn btn-primary rounded-pill">
+                <i class="fas fa-calendar-plus me-2"></i>Book Now
+              </a>
+              <a href="/services/${service.id}" class="btn btn-outline-primary rounded-pill">
+                <i class="fas fa-info-circle me-2"></i>Details
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    col.className = 'col-lg-4 col-md-6';
+    col.innerHTML = `
+      <div class="service-card h-100 p-4 rounded-4 shadow-sm bg-white border-0 hover-lift" data-aos="fade-up" data-aos-delay="${index * 100}">
+        <div class="service-icon-wrapper mb-3">
+          <i class="${icon} text-primary"></i>
+        </div>
+        <h5 class="fw-bold mb-2">${service.name}</h5>
+        <p class="text-muted small mb-3">${service.category || 'Professional Service'}</p>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span class="text-primary fw-bold">From ₹${Number(service.base_price || 0).toFixed(0)}</span>
+          <span class="badge bg-light text-dark">Available</span>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="/booking-map?service_id=${service.id}" class="btn btn-primary flex-grow-1 rounded-pill">
+            <i class="fas fa-calendar-plus me-2"></i>Book Now
+          </a>
+          <a href="/services/${service.id}" class="btn btn-outline-primary rounded-pill">
+            <i class="fas fa-info-circle"></i>
+          </a>
+        </div>
+      </div>`;
+  }
+  
+  return col;
+}
+
+// Render popular services
+function renderPopularServices() {
+  const container = document.getElementById('popularServices');
+  container.innerHTML = '';
+
+  popularServices.forEach(service => {
+    const icon = serviceIcons[service.name] || serviceIcons[service.category] || 'fas fa-tools';
+    const col = document.createElement('div');
+    col.className = 'col-lg-3 col-md-6';
+    col.innerHTML = `
+      <div class="popular-service-card text-center p-3 rounded-3 bg-white shadow-sm border-0 hover-lift">
+        <div class="service-icon-wrapper mb-2">
+          <i class="${icon} text-primary"></i>
+        </div>
+        <h6 class="fw-bold mb-1">${service.name}</h6>
+        <p class="text-muted small mb-2">From ₹${Number(service.base_price || 0).toFixed(0)}</p>
+        <a href="/booking-map?service_id=${service.id}" class="btn btn-outline-primary btn-sm rounded-pill">
+          Book Now
+        </a>
+      </div>`;
+    container.appendChild(col);
+  });
+}
+
+// Switch between grid and list view
+function switchView(view) {
+  currentView = view;
+  
+  // Update button states
+  const gridBtn = document.getElementById('gridViewBtn');
+  const listBtn = document.getElementById('listViewBtn');
+  
+  if (view === 'grid') {
+    gridBtn.classList.remove('btn-outline-primary');
+    gridBtn.classList.add('btn-primary');
+    listBtn.classList.remove('btn-primary');
+    listBtn.classList.add('btn-outline-secondary');
+  } else {
+    listBtn.classList.remove('btn-outline-secondary');
+    listBtn.classList.add('btn-primary');
+    gridBtn.classList.remove('btn-primary');
+    gridBtn.classList.add('btn-outline-primary');
+  }
+  
+  renderServices();
+}
+
+// Update service count
+function updateServiceCount() {
+  document.getElementById('serviceCount').textContent = filteredServices.length;
+}
+
+// Clear all filters
+function clearFilters() {
+  document.getElementById('serviceSearch').value = '';
+  document.getElementById('categoryFilter').value = '';
+  filteredServices = [...allServices];
+  renderServices();
+  updateServiceCount();
+}
+
+// Debounce function for search
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+</script>
+{% endblock %}
+
+
+
+
+
+

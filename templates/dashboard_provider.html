@@ -1,0 +1,1595 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid px-0">
+  <!-- Provider Header -->
+  <section class="py-4 bg-gradient-primary text-white">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <div class="d-flex align-items-center mb-3">
+            <div class="provider-avatar me-3">
+              <img id="providerAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Provider&backgroundColor=c7a2ff" 
+                   class="rounded-circle" width="60" alt="Provider Avatar">
+            </div>
+            <div>
+              <h2 class="mb-1 fw-bold">Provider Dashboard</h2>
+              <p class="mb-0 text-white-50">Manage your services and track your earnings</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+          <div class="d-flex gap-2 justify-content-lg-end">
+            <a href="/provider/service-requests" class="btn btn-outline-light btn-lg px-4 py-3 rounded-pill shadow-lg">
+              <i class="fas fa-quote-left me-2"></i>Service Requests
+            </a>
+            <button id="toggleAvailability" class="btn btn-light btn-lg px-4 py-3 rounded-pill shadow-lg">
+              <i class="fas fa-toggle-on me-2"></i>Available
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Provider Stats -->
+  <section class="py-4 bg-white">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-3 col-md-6">
+          <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-0 text-center hover-lift">
+            <div class="stat-icon mx-auto mb-3">
+              <i class="fas fa-calendar-check text-primary"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-primary" id="totalJobs">0</h3>
+            <p class="text-muted mb-0 small">Total Jobs</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-0 text-center hover-lift">
+            <div class="stat-icon mx-auto mb-3">
+              <i class="fas fa-clock text-warning"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-warning" id="pendingJobs">0</h3>
+            <p class="text-muted mb-0 small">Pending Jobs</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-0 text-center hover-lift">
+            <div class="stat-icon mx-auto mb-3">
+              <i class="fas fa-star text-success"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-success" id="averageRating">5.0</h3>
+            <p class="text-muted mb-0 small">Average Rating</p>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="stat-card p-4 rounded-4 shadow-sm bg-white border-0 text-center hover-lift">
+            <div class="stat-icon mx-auto mb-3">
+              <i class="fas fa-rupee-sign text-info"></i>
+            </div>
+            <h3 class="fw-bold mb-1 text-info" id="totalEarnings">₹0</h3>
+            <p class="text-muted mb-0 small">Total Earnings</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <section class="py-4 bg-light">
+    <div class="container">
+      <div class="row g-4">
+        <!-- Incoming Requests -->
+        <div class="col-lg-6">
+          <div class="card shadow-sm rounded-4 border-0 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">Incoming Requests</h5>
+                <span class="badge bg-primary" id="requestCount">0</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="incomingList" class="vstack gap-3">
+                <!-- Chat messages and requests will be loaded here -->
+              </div>
+              <div id="noRequests" class="text-center py-5 d-none">
+                <div class="mb-3">
+                  <i class="fas fa-inbox text-muted" style="font-size: 3rem;"></i>
+                </div>
+                <h6 class="text-muted">No pending requests</h6>
+                <p class="text-muted small">You'll see new booking requests and messages here</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Earnings Chart -->
+        <div class="col-lg-6">
+          <div class="card shadow-sm rounded-4 border-0 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">Earnings Overview</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                  <input type="radio" class="btn-check" name="earningsPeriod" id="weekEarnings" autocomplete="off" checked>
+                  <label class="btn btn-outline-primary" for="weekEarnings">Week</label>
+                  
+                  <input type="radio" class="btn-check" name="earningsPeriod" id="monthEarnings" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="monthEarnings">Month</label>
+                  
+                  <input type="radio" class="btn-check" name="earningsPeriod" id="yearEarnings" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="yearEarnings">Year</label>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <canvas id="earningsChart" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Actions & Job History -->
+  <section class="py-4 bg-white">
+    <div class="container">
+      <div class="row g-4">
+        <!-- Quick Actions & Services -->
+        <div class="col-lg-4">
+          <div class="card shadow-sm rounded-4 border-0 mb-4">
+            <div class="card-header bg-white border-0 pb-0">
+              <h5 class="fw-bold mb-3">My Services</h5>
+            </div>
+            <div class="card-body">
+              <div id="myServicesList" class="mb-3">
+                <!-- Services will be loaded here -->
+              </div>
+              <button class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+                <i class="fas fa-plus me-2"></i>Add Service
+              </button>
+            </div>
+          </div>
+          
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <h5 class="fw-bold mb-3">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-grid gap-3">
+                <button class="btn btn-primary rounded-pill py-3" onclick="refreshRequests()">
+                  <i class="fas fa-sync-alt me-2"></i>Refresh Requests
+                </button>
+                <a href="/profile" class="btn btn-outline-primary rounded-pill py-3">
+                  <i class="fas fa-user-edit me-2"></i>Update Profile
+                </a>
+                <button class="btn btn-outline-secondary rounded-pill py-3" onclick="viewAnalytics()">
+                  <i class="fas fa-chart-bar me-2"></i>View Analytics
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Job History -->
+        <div class="col-lg-8">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">Job History</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                  <input type="radio" class="btn-check" name="jobFilter" id="allJobs" autocomplete="off" checked>
+                  <label class="btn btn-outline-primary" for="allJobs">All</label>
+                  
+                  <input type="radio" class="btn-check" name="jobFilter" id="completedJobs" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="completedJobs">Completed</label>
+                  
+                  <input type="radio" class="btn-check" name="jobFilter" id="pendingJobs" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="pendingJobs">Pending</label>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0" id="providerJobsTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Service</th>
+                      <th>Customer</th>
+                      <th>Status</th>
+                      <th>Price</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modern Chat Interface -->
+  <section class="py-4 bg-white">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-12">
+          <div class="card shadow-lg rounded-4 border-0 overflow-hidden">
+            <div class="card-header bg-gradient-primary text-white border-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-comments me-3" style="font-size: 1.5rem;"></i>
+                  <h5 class="fw-bold mb-0">Customer Conversations</h5>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                  <span class="badge bg-light text-dark px-3 py-2" id="unreadMessageCount">0</span>
+                  <button class="btn btn-light btn-sm" onclick="refreshMessages()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="row g-0 h-100">
+                <!-- Conversations Sidebar -->
+                <div class="col-md-4 border-end bg-light">
+                  <div class="conversations-sidebar" style="height: 500px; overflow-y: auto;">
+                    <div id="messageList" class="conversation-list">
+                      <!-- Conversations will be loaded here -->
+                    </div>
+                    <div id="noMessages" class="text-center py-5 d-none">
+                      <div class="mb-3">
+                        <i class="fas fa-comments text-muted" style="font-size: 3rem;"></i>
+                      </div>
+                      <h6 class="text-muted">No conversations yet</h6>
+                      <p class="text-muted small">Customer messages will appear here</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Chat Area -->
+                <div class="col-md-8">
+                  <!-- No chat selected -->
+                  <div id="noChatSelected" class="d-flex align-items-center justify-content-center h-100" style="height: 500px;">
+                    <div class="text-center">
+                      <div class="chat-placeholder-icon mb-4">
+                        <i class="fas fa-comment-dots"></i>
+                      </div>
+                      <h5 class="text-muted mb-2">Select a conversation</h5>
+                      <p class="text-muted">Choose a customer to start chatting</p>
+                    </div>
+                  </div>
+                  
+                  <!-- Active Chat -->
+                  <div id="chatArea" class="d-none h-100">
+                    <div class="modern-chat-container">
+                      <!-- Chat Header -->
+                      <div class="chat-header-modern">
+                        <div class="d-flex align-items-center">
+                          <div class="chat-avatar-modern me-3">
+                            <img id="chatCustomerAvatar" src="" alt="Customer" class="rounded-circle">
+                            <div class="online-indicator-modern"></div>
+                          </div>
+                          <div>
+                            <h6 class="mb-0 fw-bold" id="chatCustomerName">Customer Name</h6>
+                            <small class="text-muted" id="chatCustomerService">Service</small>
+                          </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-light btn-sm" id="closeChatBtn">
+                          <i class="fas fa-times"></i>
+                        </button>
+                      </div>
+                      
+                      <!-- Messages Area -->
+                      <div class="chat-messages-modern" id="providerChatMessages">
+                        <!-- Messages will be loaded here -->
+                      </div>
+                      
+                      <!-- Typing Indicator -->
+                      <div class="typing-indicator-modern d-none" id="providerTypingIndicator">
+                        <div class="typing-dots-modern">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                        <span class="typing-text-modern">Customer is typing...</span>
+                      </div>
+                      
+                      <!-- Message Input -->
+                      <div class="chat-input-modern">
+                        <div class="input-group">
+                          <input type="text" class="form-control" id="providerMessageInput" 
+                                 placeholder="Type your message..." maxlength="500">
+                          <button class="btn btn-primary" type="button" id="providerSendBtn">
+                            <i class="fas fa-paper-plane"></i>
+                          </button>
+                        </div>
+                        <div class="chat-actions-modern">
+                          <button class="btn btn-outline-secondary btn-sm" id="providerAttachBtn">
+                            <i class="fas fa-paperclip me-1"></i>Attach
+                          </button>
+                          <button class="btn btn-outline-info btn-sm" id="providerLocationBtn">
+                            <i class="fas fa-map-marker-alt me-1"></i>Location
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Notifications & Tips -->
+  <section class="py-4 bg-light">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <h5 class="fw-bold mb-0">Recent Notifications</h5>
+            </div>
+            <div class="card-body">
+              <div id="notificationsList">
+                <!-- Notifications will be loaded here -->
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card shadow-sm rounded-4 border-0">
+            <div class="card-header bg-white border-0 pb-0">
+              <h5 class="fw-bold mb-0">Performance Tips</h5>
+            </div>
+            <div class="card-body">
+              <div class="tips-list">
+                <div class="tip-item d-flex align-items-start mb-3">
+                  <div class="tip-icon me-3">
+                    <i class="fas fa-clock text-primary"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-1">Respond Quickly</h6>
+                    <p class="text-muted small mb-0">Quick responses increase your chances of getting bookings.</p>
+                  </div>
+                </div>
+                <div class="tip-item d-flex align-items-start mb-3">
+                  <div class="tip-icon me-3">
+                    <i class="fas fa-star text-warning"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-1">Maintain High Ratings</h6>
+                    <p class="text-muted small mb-0">Good ratings help you get more bookings and better rates.</p>
+                  </div>
+                </div>
+                <div class="tip-item d-flex align-items-start">
+                  <div class="tip-icon me-3">
+                    <i class="fas fa-map-marker-alt text-success"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-1">Update Your Location</h6>
+                    <p class="text-muted small mb-0">Keep your location updated to appear in nearby searches.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Add Service Modal -->
+<div class="modal fade" id="addServiceModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-4">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Add Service</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addServiceForm">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Select Service</label>
+            <select class="form-select" id="serviceSelect" required>
+              <option value="">Choose a service...</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Hourly Rate (₹)</label>
+            <input type="number" class="form-control" id="hourlyRate" placeholder="Enter your hourly rate" min="100" max="5000" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Experience Level</label>
+            <select class="form-select" id="experienceLevel">
+              <option value="Beginner">Beginner (0-2 years)</option>
+              <option value="Intermediate">Intermediate (2-5 years)</option>
+              <option value="Expert">Expert (5+ years)</option>
+            </select>
+          </div>
+          <div id="addServiceMsg" class="alert alert-info d-none">
+            <i class="fas fa-info-circle me-2"></i>
+            <span></span>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveServiceBtn">
+          <i class="fas fa-save me-2"></i>Add Service
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block styles %}
+<style>
+/* Provider Chat Styles */
+.message-list {
+  background: #f8f9fa;
+}
+
+.message-item {
+  border: none;
+  border-bottom: 1px solid #e9ecef;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.message-item:hover {
+  background: #e3f2fd;
+}
+
+.message-item.active {
+  background: #bbdefb;
+  border-left: 4px solid #2196f3;
+}
+
+.message-item.unread {
+  background: #fff3e0;
+  border-left: 4px solid #ff9800;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.message-preview {
+  font-size: 0.875rem;
+  color: #6c757d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.message-time {
+  font-size: 0.75rem;
+  color: #adb5bd;
+}
+
+.unread-badge {
+  background: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-avatar {
+  position: relative;
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #28a745;
+  border: 2px solid white;
+  border-radius: 50%;
+}
+
+.chat-messages {
+  background: #f8f9fa;
+}
+
+.chat-message {
+  display: flex;
+  margin-bottom: 0.75rem;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.chat-message.user {
+  justify-content: flex-end;
+}
+
+.chat-message.provider {
+  justify-content: flex-start;
+}
+
+.message-bubble {
+  max-width: 70%;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  position: relative;
+  word-wrap: break-word;
+}
+
+.message-bubble.user {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom-right-radius: 0.25rem;
+}
+
+.message-bubble.provider {
+  background: white;
+  color: #333;
+  border: 1px solid #e9ecef;
+  border-bottom-left-radius: 0.25rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.message-meta {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.message-bubble.user .message-meta {
+  text-align: right;
+}
+
+.message-bubble.provider .message-meta {
+  text-align: left;
+}
+
+.chat-typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background: #6c757d;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-text {
+  font-size: 0.875rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.chat-input-area {
+  background: white;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+
+.chat-actions .btn {
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.75rem;
+}
+
+/* Message animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Chat Modal Styles (matching user chat) */
+.chat-modal {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  overflow: hidden;
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 1rem 1.5rem;
+}
+
+.chat-header .chat-avatar {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.chat-header .chat-avatar img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+
+.chat-header .online-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #28a745;
+  border: 2px solid white;
+  border-radius: 50%;
+}
+
+.chat-header .btn-close {
+  color: white;
+  opacity: 0.8;
+  font-size: 1.2rem;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+}
+
+.chat-header .btn-close:hover {
+  opacity: 1;
+}
+
+.chat-body {
+  height: 400px;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chat-message {
+  display: flex;
+  margin-bottom: 0.75rem;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.chat-message.user {
+  justify-content: flex-end;
+}
+
+.chat-message.provider {
+  justify-content: flex-start;
+}
+
+.message-bubble {
+  max-width: 70%;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  position: relative;
+  word-wrap: break-word;
+}
+
+.message-bubble.user {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom-right-radius: 0.25rem;
+}
+
+.message-bubble.provider {
+  background: white;
+  color: #333;
+  border: 1px solid #e9ecef;
+  border-bottom-left-radius: 0.25rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.message-meta {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.message-bubble.user .message-meta {
+  text-align: right;
+}
+
+.message-bubble.provider .message-meta {
+  text-align: left;
+}
+
+.chat-typing-indicator {
+  padding: 0.5rem 1rem;
+  background: white;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background: #6c757d;
+  border-radius: 50%;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-text {
+  font-size: 0.875rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.chat-footer {
+  background: white;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.chat-input {
+  border: 2px solid #e9ecef;
+  border-radius: 2rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.chat-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.chat-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+
+.chat-actions .btn {
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.75rem;
+}
+
+/* Scrollbar styling for chat messages */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .chat-modal {
+    height: 400px;
+  }
+  
+  .chat-body {
+    height: 350px;
+  }
+  
+  .message-bubble {
+    max-width: 85%;
+  }
+  
+  .chat-actions {
+    flex-wrap: wrap;
+  }
+}
+
+/* Scrollbar styling */
+.message-list::-webkit-scrollbar,
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.message-list::-webkit-scrollbar-track,
+.chat-messages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.message-list::-webkit-scrollbar-thumb,
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.message-list::-webkit-scrollbar-thumb:hover,
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .message-list {
+    height: 300px !important;
+  }
+  
+  .chat-messages {
+    height: 250px !important;
+  }
+  
+  .message-bubble {
+    max-width: 85%;
+  }
+  
+  .chat-actions {
+    flex-wrap: wrap;
+  }
+}
+</style>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='js/provider_dashboard.js') }}"></script>
+<script>
+// Provider Chat Functionality
+(function() {
+  'use strict';
+  
+  let socket;
+  let currentChatId = null;
+  let chatMessages = [];
+  let conversations = [];
+  let isTyping = false;
+  let typingTimeout;
+  
+  // Initialize chat when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeProviderChat();
+    startProviderLocationTracking();
+  });
+  
+  // Initialize provider chat
+  function initializeProviderChat() {
+    // Check if user is authenticated
+    const token = getAuthToken();
+    if (!token) {
+      console.error('No authentication token found');
+      showNotification('Please login to access the provider dashboard', 'error');
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
+      return;
+    }
+    
+    // Setup socket connection
+    socket = io();
+    
+    // Setup chat event listeners
+    setupChatEventListeners();
+    
+    // Load conversations
+    loadConversations();
+    
+    // Setup socket events
+    setupSocketEvents();
+  }
+  
+  // Get auth token
+  function getAuthToken() {
+    return localStorage.getItem('token');
+  }
+  
+  // Setup chat event listeners
+  function setupChatEventListeners() {
+    // Send message button
+    document.getElementById('providerSendBtn').addEventListener('click', sendProviderMessage);
+    
+    // Send message on Enter key
+    document.getElementById('providerMessageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendProviderMessage();
+      }
+    });
+    
+    // Close chat button
+    document.getElementById('closeChatBtn').addEventListener('click', () => {
+      closeChat();
+    });
+    
+    // Typing indicator
+    document.getElementById('providerMessageInput').addEventListener('input', () => {
+      if (!isTyping) {
+        isTyping = true;
+        socket.emit('typing_start', { 
+          provider_id: getCurrentProviderId(), 
+          booking_id: currentChatId 
+        });
+      }
+      
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        isTyping = false;
+        socket.emit('typing_stop', { 
+          provider_id: getCurrentProviderId(), 
+          booking_id: currentChatId 
+        });
+      }, 1000);
+    });
+    
+    // Attach file
+    document.getElementById('providerAttachBtn').addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,application/pdf,.doc,.docx';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          sendProviderFileMessage(file);
+        }
+      };
+      input.click();
+    });
+    
+    // Send location
+    document.getElementById('providerLocationBtn').addEventListener('click', () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+            address: 'Current location'
+          };
+          sendProviderLocationMessage(location);
+        }, (error) => {
+          showNotification('Unable to get your location', 'error');
+        });
+      } else {
+        showNotification('Geolocation not supported', 'error');
+      }
+    });
+  }
+  
+  // Setup socket events
+  function setupSocketEvents() {
+    socket.on('connect', function() {
+      console.log('Provider connected to chat server');
+    });
+    
+    socket.on('disconnect', function() {
+      console.log('Provider disconnected from chat server');
+    });
+    
+    // Listen for incoming messages
+    socket.on('chat_message', (message) => {
+      if (message.booking_id === currentChatId) {
+        addMessageToProviderChat(message);
+        chatMessages.push(message);
+      }
+      
+      // Update conversation list
+      updateConversationList(message);
+    });
+    
+    // Listen for typing indicators
+    socket.on('typing_start', (data) => {
+      if (data.booking_id === currentChatId) {
+        document.getElementById('providerTypingIndicator').classList.remove('d-none');
+      }
+    });
+    
+    socket.on('typing_stop', (data) => {
+      if (data.booking_id === currentChatId) {
+        document.getElementById('providerTypingIndicator').classList.add('d-none');
+      }
+    });
+  }
+  
+  // Load conversations
+  async function loadConversations() {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        console.error('No authentication token available');
+        showNotification('Please login to access conversations', 'error');
+        return;
+      }
+      
+      const response = await fetch('/api/provider/conversations', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        conversations = await response.json();
+        renderConversationList();
+      } else if (response.status === 401) {
+        console.error('Authentication failed - redirecting to login');
+        showNotification('Session expired. Please login again.', 'error');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else {
+        console.error('Failed to load conversations:', response.status);
+        showNoMessages();
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+      showNoMessages();
+    }
+  }
+  
+  // Render conversation list
+  function renderConversationList() {
+    const messageList = document.getElementById('messageList');
+    const noMessages = document.getElementById('noMessages');
+    
+    if (conversations.length === 0) {
+      showNoMessages();
+      return;
+    }
+    
+    noMessages.classList.add('d-none');
+    messageList.innerHTML = '';
+    
+    conversations.forEach(conversation => {
+      const messageItem = document.createElement('div');
+      messageItem.className = `message-item ${conversation.unread_count > 0 ? 'unread' : ''}`;
+      messageItem.dataset.bookingId = conversation.booking_id;
+      
+      const lastMessage = conversation.last_message || { content: 'No messages yet', timestamp: conversation.updated_at };
+      const timeAgo = getTimeAgo(new Date(lastMessage.timestamp));
+      
+      messageItem.innerHTML = `
+        <div class="d-flex align-items-center">
+          <img src="${conversation.customer_avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + conversation.customer_name}" 
+               alt="${conversation.customer_name}" class="message-avatar me-3">
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-start">
+              <h6 class="mb-1">${conversation.customer_name}</h6>
+              <small class="message-time">${timeAgo}</small>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="message-preview">${lastMessage.content}</span>
+              ${conversation.unread_count > 0 ? `<span class="unread-badge">${conversation.unread_count}</span>` : ''}
+            </div>
+            <small class="text-muted">${conversation.service_name}</small>
+          </div>
+        </div>
+      `;
+      
+      messageItem.addEventListener('click', () => {
+        selectConversation(conversation.booking_id);
+      });
+      
+      messageList.appendChild(messageItem);
+    });
+  }
+  
+  // Select conversation
+  async function selectConversation(bookingId) {
+    currentChatId = bookingId;
+    
+    // Update active conversation
+    document.querySelectorAll('.message-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    const activeItem = document.querySelector(`[data-booking-id="${bookingId}"]`);
+    if (activeItem) {
+      activeItem.classList.add('active');
+    }
+    
+    // Show chat area
+    document.getElementById('noChatSelected').classList.add('d-none');
+    document.getElementById('chatArea').classList.remove('d-none');
+    
+    // Load chat messages
+    await loadChatMessages(bookingId);
+    
+    // Update chat header
+    const conversation = conversations.find(c => c.booking_id === bookingId);
+    if (conversation) {
+      document.getElementById('chatCustomerName').textContent = conversation.customer_name;
+      document.getElementById('chatCustomerService').textContent = conversation.service_name;
+      document.getElementById('chatCustomerAvatar').src = conversation.customer_avatar || 
+        'https://api.dicebear.com/7.x/avataaars/svg?seed=' + conversation.customer_name;
+    }
+  }
+  
+  // Close chat
+  function closeChat() {
+    document.getElementById('chatArea').classList.add('d-none');
+    document.getElementById('noChatSelected').classList.remove('d-none');
+    currentChatId = null;
+    chatMessages = [];
+    
+    // Remove active state from all conversations
+    document.querySelectorAll('.message-item').forEach(item => {
+      item.classList.remove('active');
+    });
+  }
+  
+  // Load chat messages
+  async function loadChatMessages(bookingId) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/chat/${bookingId}/messages`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        chatMessages = await response.json();
+        renderProviderChatMessages();
+      }
+    } catch (error) {
+      console.error('Error loading chat messages:', error);
+    }
+  }
+  
+  // Render provider chat messages
+  function renderProviderChatMessages() {
+    const messagesContainer = document.getElementById('providerChatMessages');
+    messagesContainer.innerHTML = '';
+    
+    chatMessages.forEach(message => {
+      addMessageToProviderChat(message, false);
+    });
+    
+    scrollToBottom();
+  }
+  
+  // Add message to provider chat
+  function addMessageToProviderChat(message, animate = true) {
+    const messagesContainer = document.getElementById('providerChatMessages');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${message.sender_type}`;
+    
+    const isProvider = message.sender_type === 'provider';
+    const timestamp = new Date(message.timestamp).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    let messageContent = '';
+    
+    if (message.type === 'text') {
+      messageContent = `
+        <div class="message-bubble ${message.sender_type}">
+          <div class="message-text">${escapeHtml(message.content)}</div>
+          <div class="message-meta">
+            ${timestamp}
+            <span class="message-status ${message.status || 'sent'}"></span>
+          </div>
+        </div>
+      `;
+    } else if (message.type === 'file') {
+      messageContent = `
+        <div class="message-bubble ${message.sender_type}">
+          <div class="message-file">
+            <i class="fas fa-paperclip me-2"></i>
+            <a href="${message.file_url}" target="_blank" class="text-decoration-none">
+              ${message.file_name}
+            </a>
+          </div>
+          <div class="message-meta">
+            ${timestamp}
+            <span class="message-status ${message.status || 'sent'}"></span>
+          </div>
+        </div>
+      `;
+    } else if (message.type === 'location') {
+      messageContent = `
+        <div class="message-bubble ${message.sender_type}">
+          <div class="message-location">
+            <i class="fas fa-map-marker-alt me-2"></i>
+            <a href="https://maps.google.com/?q=${message.location.lat},${message.location.lon}" 
+               target="_blank" class="text-decoration-none">
+              ${message.location.address}
+            </a>
+          </div>
+          <div class="message-meta">
+            ${timestamp}
+            <span class="message-status ${message.status || 'sent'}"></span>
+          </div>
+        </div>
+      `;
+    }
+    
+    messageDiv.innerHTML = messageContent;
+    
+    if (animate) {
+      messageDiv.style.opacity = '0';
+      messageDiv.style.transform = 'translateY(20px)';
+    }
+    
+    messagesContainer.appendChild(messageDiv);
+    
+    if (animate) {
+      setTimeout(() => {
+        messageDiv.style.transition = 'all 0.3s ease-out';
+        messageDiv.style.opacity = '1';
+        messageDiv.style.transform = 'translateY(0)';
+      }, 100);
+    }
+    
+    scrollToBottom();
+  }
+  
+  // Send provider message
+  function sendProviderMessage() {
+    const messageInput = document.getElementById('providerMessageInput');
+    const message = messageInput.value.trim();
+    
+    if (!message || !currentChatId) return;
+    
+    // Send to server
+    fetch('/api/chat/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`
+      },
+      body: JSON.stringify({
+        booking_id: currentChatId,
+        sender_type: 'provider',
+        type: 'text',
+        content: message
+      })
+    })
+    .then(response => response.json())
+    .then(messageData => {
+      // Add message to chat
+      addMessageToProviderChat(messageData);
+      chatMessages.push(messageData);
+      
+      // Clear input
+      messageInput.value = '';
+    })
+    .catch(error => {
+      console.error('Error sending message:', error);
+      showNotification('Failed to send message', 'error');
+    });
+  }
+  
+  // Send provider file message
+  function sendProviderFileMessage(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('provider_id', getCurrentProviderId());
+    formData.append('booking_id', currentChatId);
+    
+    const messageData = {
+      type: 'file',
+      file_name: file.name,
+      file_url: '#',
+      sender_type: 'provider',
+      provider_id: getCurrentProviderId(),
+      booking_id: currentChatId,
+      timestamp: new Date().toISOString()
+    };
+    
+    addMessageToProviderChat(messageData);
+    chatMessages.push(messageData);
+    
+    // Upload file
+    fetch('/api/chat/upload', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: formData
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          messageData.file_url = data.file_url;
+          socket.emit('chat_message', messageData);
+        } else {
+          showNotification('Failed to upload file', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('File upload error:', error);
+        showNotification('Failed to upload file', 'error');
+      });
+  }
+  
+  // Send provider location message
+  function sendProviderLocationMessage(location) {
+    const messageData = {
+      type: 'location',
+      location: location,
+      sender_type: 'provider',
+      provider_id: getCurrentProviderId(),
+      booking_id: currentChatId,
+      timestamp: new Date().toISOString()
+    };
+    
+    addMessageToProviderChat(messageData);
+    chatMessages.push(messageData);
+    
+    socket.emit('chat_message', messageData);
+  }
+  
+  // Update conversation list
+  function updateConversationList(message) {
+    const conversation = conversations.find(c => c.booking_id === message.booking_id);
+    if (conversation) {
+      conversation.last_message = message;
+      conversation.updated_at = message.timestamp;
+      if (message.sender_type === 'user') {
+        conversation.unread_count = (conversation.unread_count || 0) + 1;
+      }
+    } else {
+      // Add new conversation
+      conversations.unshift({
+        booking_id: message.booking_id,
+        customer_name: message.sender_name || 'Customer',
+        customer_avatar: message.sender_avatar,
+        service_name: 'Service',
+        last_message: message,
+        updated_at: message.timestamp,
+        unread_count: message.sender_type === 'user' ? 1 : 0
+      });
+    }
+    
+    renderConversationList();
+    updateUnreadCount();
+  }
+  
+  // Update unread count
+  function updateUnreadCount() {
+    const totalUnread = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
+    document.getElementById('unreadMessageCount').textContent = totalUnread;
+  }
+  
+  // Show no messages
+  function showNoMessages() {
+    document.getElementById('messageList').innerHTML = '';
+    document.getElementById('noMessages').classList.remove('d-none');
+  }
+  
+  // Scroll to bottom
+  function scrollToBottom() {
+    const messagesContainer = document.getElementById('providerChatMessages');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+  
+  // Get time ago
+  function getTimeAgo(date) {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  }
+  
+  // Escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  // Get current provider ID (you'll need to implement this based on your auth system)
+  function getCurrentProviderId() {
+    // This should return the current provider's ID from your auth system
+    // For now, returning a placeholder
+    return 'provider_id_placeholder';
+  }
+  
+  // Show notification
+  function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+      <div class="d-flex align-items-center">
+        <i class="fas fa-${getNotificationIcon(type)} me-2"></i>
+        <span>${message}</span>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+      </div>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 5000);
+  }
+  
+  // Get notification icon
+  function getNotificationIcon(type) {
+    const icons = {
+      'success': 'check-circle',
+      'error': 'exclamation-triangle',
+      'warning': 'exclamation-triangle',
+      'info': 'info-circle'
+    };
+    return icons[type] || 'info-circle';
+  }
+  
+  // Refresh messages
+  window.refreshMessages = function() {
+    loadConversations();
+    showNotification('Messages refreshed', 'info');
+  };
+
+  // Provider Location Tracking Functions
+  let locationTrackingInterval;
+  
+  // Start automatic location tracking for providers
+  function startProviderLocationTracking() {
+    console.log('Starting provider location tracking...');
+    
+    // Get initial location
+    getCurrentProviderLocation();
+    
+    // Update location every 10 seconds for providers
+    locationTrackingInterval = setInterval(() => {
+      getCurrentProviderLocation();
+    }, 10000);
+  }
+  
+  // Get current provider location and update server
+  function getCurrentProviderLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async position => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          
+          console.log(`Provider location updated: ${lat}, ${lon}`);
+          
+          // Update location on server
+          await updateProviderLocationOnServer(lat, lon);
+        },
+        error => {
+          console.log('Provider location access denied or error:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 10000
+        }
+      );
+    } else {
+      console.log('Geolocation not supported for provider');
+    }
+  }
+  
+  // Update provider location on server
+  async function updateProviderLocationOnServer(lat, lon) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/providers/update-tracking-location', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ lat, lon })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Provider location updated on server:', result);
+        
+        // Show subtle notification
+        showLocationUpdateNotification();
+      } else {
+        console.error('Failed to update provider location on server');
+      }
+    } catch (error) {
+      console.error('Error updating provider location:', error);
+    }
+  }
+  
+  // Show location update notification
+  function showLocationUpdateNotification() {
+    // Create a subtle notification
+    const notification = document.createElement('div');
+    notification.className = 'position-fixed top-0 end-0 m-3 alert alert-success alert-dismissible fade show';
+    notification.style.zIndex = '9999';
+    notification.innerHTML = `
+      <i class="fas fa-map-marker-alt me-2"></i>
+      Location updated for tracking
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 3000);
+  }
+  
+  // Stop location tracking (if needed)
+  function stopProviderLocationTracking() {
+    if (locationTrackingInterval) {
+      clearInterval(locationTrackingInterval);
+      console.log('Provider location tracking stopped');
+    }
+  }
+  
+})();
+</script>
+{% endblock %}

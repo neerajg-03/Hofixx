@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Booking Tracking</h2>
+<p>Booking ID: <span id="bid">{{ booking_id }}</span></p>
+<div class="alert alert-info" id="status">Waiting for updates...</div>
+<div id="map" style="height: 420px;"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const bookingId = Number(document.getElementById('bid').textContent);
+const socket = io();
+socket.emit('join', { room: `booking_${bookingId}` });
+socket.on('booking_status', (payload) => {
+  if (payload.id === bookingId) {
+    document.getElementById('status').textContent = `Status: ${payload.status}`;
+  }
+});
+
+let map;
+
+// Initialize Google Maps
+function initMap() {
+  const mapOptions = {
+    center: { lat: 28.6139, lng: 77.2090 },
+    zoom: 11,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+  
+  map = new google.maps.Map(document.getElementById('map'), mapOptions);
+}
+
+// Load Google Maps API
+if (typeof google === 'undefined') {
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAG0GnKSwNcd_HtC1x1xVdzf-aWtzTIGBs&callback=initMap`;
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+} else {
+  initMap();
+}
+</script>
+{% endblock %}
+

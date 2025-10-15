@@ -1,0 +1,1426 @@
+{% extends "base.html" %}
+
+{% block title %}Service Requests - Provider Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+  <!-- Header Section -->
+  <section class="py-4 bg-gradient-primary text-white">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <div class="d-flex align-items-center mb-3">
+            <div class="provider-avatar me-3">
+              <img id="providerAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Provider&backgroundColor=c7a2ff" 
+                   class="rounded-circle" width="60" alt="Provider Avatar">
+            </div>
+            <div>
+              <h2 class="mb-1 fw-bold">Service Requests</h2>
+              <p class="mb-0 text-white-50">View and respond to service requests</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4 text-lg-end">
+          <div class="d-flex gap-2 justify-content-lg-end">
+            <button class="btn btn-outline-light btn-lg px-4 py-3 rounded-pill shadow-lg" onclick="refreshRequests()">
+              <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <section class="py-4 bg-light">
+    <div class="container">
+      <div class="row g-4">
+        <!-- Notifications Sidebar -->
+        <div class="col-lg-4">
+          <div class="card shadow-sm rounded-4 border-0 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">Notifications</h5>
+                <span class="badge bg-primary" id="notificationCount">0</span>
+              </div>
+            </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+              <div id="notificationsList">
+                <div class="text-center py-4">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="mt-3 text-muted">Loading notifications...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Service Requests List -->
+        <div class="col-lg-8">
+          <div class="card shadow-sm rounded-4 border-0 h-100">
+            <div class="card-header bg-white border-0 pb-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">Available Service Requests</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                  <input type="radio" class="btn-check" name="requestFilter" id="allRequests" autocomplete="off" checked>
+                  <label class="btn btn-outline-primary" for="allRequests">All</label>
+                  
+                  <input type="radio" class="btn-check" name="requestFilter" id="availableRequests" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="availableRequests">Available</label>
+                  
+                  <input type="radio" class="btn-check" name="requestFilter" id="quotedRequests" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="quotedRequests">Quoted</label>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="serviceRequestsList">
+                <div class="text-center py-5">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="mt-3 text-muted">Loading service requests...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Quote Submission Modal -->
+<div class="modal fade" id="quoteModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="fas fa-quote-left me-2"></i>Submit Quote
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Request Details -->
+        <div class="row">
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header bg-light">
+                <h6 class="fw-bold mb-0">Service Request Details</h6>
+              </div>
+              <div class="card-body" id="requestDetailsForQuote">
+                <!-- Request details will be loaded here -->
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header bg-light">
+                <h6 class="fw-bold mb-0">Your Quote</h6>
+              </div>
+              <div class="card-body">
+                <form id="quoteForm">
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold">Total Price (₹)</label>
+                    <input type="number" class="form-control form-control-lg" id="quotePrice" min="1" step="0.01" required>
+                    <div class="form-text">Enter your total price for this service</div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold">Estimated Duration</label>
+                    <select class="form-select" id="estimatedDuration" required>
+                      <option value="">Select duration</option>
+                      <option value="1-2 hours">1-2 hours</option>
+                      <option value="2-4 hours">2-4 hours</option>
+                      <option value="4-6 hours">4-6 hours</option>
+                      <option value="1 day">1 day</option>
+                      <option value="2-3 days">2-3 days</option>
+                      <option value="1 week">1 week</option>
+                    </select>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold">Materials Included</label>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="materialsIncluded" checked>
+                      <label class="form-check-label" for="materialsIncluded">
+                        I will provide all necessary materials
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold">Quote Notes</label>
+                    <textarea class="form-control" id="quoteNotes" rows="4" 
+                              placeholder="Add any additional details about your service, approach, timeline, etc."></textarea>
+                  </div>
+                  
+                  <div id="quoteMsg" class="alert alert-info d-none">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span></span>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-lg" id="submitQuoteBtn">
+          <i class="fas fa-paper-plane me-2"></i>Submit Quote
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Request Details Modal -->
+<div class="modal fade" id="requestDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Service Request Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="requestDetailsContent">
+        <!-- Request details will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="quoteFromDetailsBtn">
+          <i class="fas fa-quote-left me-1"></i>Submit Quote
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentRequestId = null;
+let socket = null;
+let refreshInterval = null;
+let allRequests = [];
+let notifications = [];
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+  initializeSocket();
+  loadNotifications();
+  loadServiceRequests();
+  setupEventListeners();
+  
+  // Set up auto-refresh every 30 seconds
+  refreshInterval = setInterval(() => {
+    loadNotifications();
+    loadServiceRequests();
+  }, 30000);
+});
+
+// Initialize WebSocket connection for real-time updates
+function initializeSocket() {
+  try {
+    socket = io();
+    
+    socket.on('connect', function() {
+      console.log('Connected to server for real-time updates');
+      const token = localStorage.getItem('token');
+      if (token) {
+        socket.emit('join_provider_room', { token: token });
+      }
+    });
+    
+    socket.on('disconnect', function() {
+      console.log('Disconnected from server');
+    });
+    
+    // Listen for new service requests
+    socket.on('new_service_request', function(data) {
+      console.log('New service request received:', data);
+      showNewRequestNotification(data);
+      loadServiceRequests(); // Refresh the list
+    });
+    
+    // Listen for quote updates
+    socket.on('quote_selected', function(data) {
+      console.log('Quote selected:', data);
+      showQuoteSelectedNotification(data);
+      loadServiceRequests(); // Refresh the list
+      loadNotifications(); // Refresh notifications
+    });
+    
+    // Listen for request cancellations
+    socket.on('request_cancelled', function(data) {
+      console.log('Request cancelled:', data);
+      showRequestCancelledNotification(data);
+      loadServiceRequests(); // Refresh the list
+      loadNotifications(); // Refresh notifications
+    });
+    
+    // Listen for requests assigned to other providers
+    socket.on('request_assigned_to_other', function(data) {
+      console.log('Request assigned to another provider:', data);
+      showRequestAssignedNotification(data);
+      loadServiceRequests(); // Refresh the list to remove it
+      loadNotifications(); // Refresh notifications
+    });
+
+    // Listen for new chat messages
+    socket.on('new_message', function(data) {
+      console.log('New message received:', data);
+      // If the chat for this request is open, add the message
+      const chatSection = document.getElementById(`chat-${data.request_id}`);
+      if (chatSection && !chatSection.classList.contains('d-none')) {
+        addMessageToChat(data.request_id, data);
+      }
+    });
+    
+    socket.on('connect_error', function(error) {
+      console.error('Socket connection error:', error);
+    });
+    
+  } catch (error) {
+    console.error('Error initializing socket:', error);
+  }
+}
+
+// Setup event listeners
+function setupEventListeners() {
+  // Quote submission
+  document.getElementById('submitQuoteBtn').addEventListener('click', submitQuote);
+  
+  // Quote from details modal
+  document.getElementById('quoteFromDetailsBtn').addEventListener('click', function() {
+    bootstrap.Modal.getInstance(document.getElementById('requestDetailsModal')).hide();
+    setTimeout(() => {
+      openQuoteModal(currentRequestId);
+    }, 300);
+  });
+  
+  // Request filter buttons
+  document.querySelectorAll('input[name="requestFilter"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      filterRequests(this.id);
+    });
+  });
+}
+
+// Show notification for new service request
+function showNewRequestNotification(requestData) {
+  const toast = document.createElement('div');
+  toast.className = 'toast align-items-center text-white bg-primary border-0 position-fixed';
+  toast.style.cssText = 'top: 20px; right: 20px; z-index: 1055; min-width: 400px;';
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-bell me-2"></i>
+          <div>
+            <div class="fw-bold">New Service Request!</div>
+            <div class="small">${requestData.service_category} • ${requestData.distance ? requestData.distance.toFixed(1) + 'km' : 'Nearby'}</div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  const bsToast = new bootstrap.Toast(toast, {
+    autohide: true,
+    delay: 8000
+  });
+  bsToast.show();
+  
+  toast.addEventListener('hidden.bs.toast', () => {
+    toast.remove();
+  });
+}
+
+// Show notification when quote is selected
+function showQuoteSelectedNotification(data) {
+  const toast = document.createElement('div');
+  toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+  toast.style.cssText = 'top: 20px; right: 20px; z-index: 1055; min-width: 400px;';
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-check-circle me-2"></i>
+          <div>
+            <div class="fw-bold">Quote Selected!</div>
+            <div class="small">Another provider was selected for this request</div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  const bsToast = new bootstrap.Toast(toast, {
+    autohide: true,
+    delay: 6000
+  });
+  bsToast.show();
+  
+  toast.addEventListener('hidden.bs.toast', () => {
+    toast.remove();
+  });
+}
+
+// Show notification when request is cancelled
+function showRequestCancelledNotification(data) {
+  const toast = document.createElement('div');
+  toast.className = 'toast align-items-center text-white bg-warning border-0 position-fixed';
+  toast.style.cssText = 'top: 20px; right: 20px; z-index: 1055; min-width: 400px;';
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <div>
+            <div class="fw-bold">Request Cancelled</div>
+            <div class="small">This service request has been cancelled by the customer</div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  const bsToast = new bootstrap.Toast(toast, {
+    autohide: true,
+    delay: 6000
+  });
+  bsToast.show();
+  
+  toast.addEventListener('hidden.bs.toast', () => {
+    toast.remove();
+  });
+}
+
+// Show notification when request is assigned to another provider
+function showRequestAssignedNotification(data) {
+  const toast = document.createElement('div');
+  toast.className = 'toast align-items-center text-white bg-info border-0 position-fixed';
+  toast.style.cssText = 'top: 20px; right: 20px; z-index: 1055; min-width: 400px;';
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-info-circle me-2"></i>
+          <div>
+            <div class="fw-bold">Request Assigned</div>
+            <div class="small">This service request has been assigned to another provider</div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  const bsToast = new bootstrap.Toast(toast, {
+    autohide: true,
+    delay: 5000
+  });
+  bsToast.show();
+  
+  toast.addEventListener('hidden.bs.toast', () => {
+    toast.remove();
+  });
+}
+
+// Load notifications
+async function loadNotifications() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('No token found, skipping notification load');
+      displayNotifications([]);
+      updateNotificationCount(0);
+      return;
+    }
+    
+    console.log('Loading notifications...');
+    const response = await fetch('/api/provider/notifications', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('Notifications response status:', response.status);
+    const data = await response.json();
+    console.log('Notifications data:', data);
+    
+    if (response.ok) {
+      notifications = data.notifications || [];
+      console.log('Loaded notifications:', notifications.length);
+      displayNotifications(notifications);
+      updateNotificationCount(notifications.length);
+    } else {
+      console.error('Failed to load notifications:', data);
+      
+      // Show empty state with error message
+      if (response.status === 401 || response.status === 403) {
+        displayNotifications([]);
+        updateNotificationCount(0);
+      } else {
+        // Display error in notifications area
+        document.getElementById('notificationsList').innerHTML = `
+          <div class="alert alert-warning small">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Could not load notifications
+            <button class="btn btn-sm btn-link" onclick="loadNotifications()">
+              <i class="fas fa-refresh"></i> Retry
+            </button>
+          </div>
+        `;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+    document.getElementById('notificationsList').innerHTML = `
+      <div class="alert alert-danger small">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        Error loading notifications
+        <button class="btn btn-sm btn-link" onclick="loadNotifications()">
+          <i class="fas fa-refresh"></i> Retry
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Display notifications
+function displayNotifications(notifications) {
+  const notificationsDiv = document.getElementById('notificationsList');
+  
+  if (notifications.length === 0) {
+    notificationsDiv.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="fas fa-bell-slash fa-3x mb-3"></i>
+        <h6>No notifications</h6>
+        <p class="small">You'll see new service request notifications here</p>
+      </div>
+    `;
+    return;
+  }
+  
+  notificationsDiv.innerHTML = notifications.map(notif => `
+    <div class="notification-item border rounded p-3 mb-3 ${!notif.is_read ? 'bg-primary bg-opacity-10 border-primary' : 'bg-light'}" 
+         onclick="openNotificationRequest('${notif.service_request_id}')" 
+         style="cursor: pointer; transition: all 0.3s ease;"
+         title="Click to view and submit quote">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1">
+          <h6 class="mb-1 fw-bold">${notif.title}</h6>
+          <p class="mb-1 small text-muted">${notif.message}</p>
+          <small class="text-muted">
+            <i class="fas fa-clock me-1"></i>
+            ${new Date(notif.created_at).toLocaleString()}
+          </small>
+          <div class="mt-2">
+            <small class="text-primary fw-semibold">
+              <i class="fas fa-mouse-pointer me-1"></i>Click to submit quote
+            </small>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          ${!notif.is_read ? '<span class="badge bg-primary">New</span>' : ''}
+          <i class="fas fa-quote-left text-primary"></i>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Update notification count
+function updateNotificationCount(count) {
+  document.getElementById('notificationCount').textContent = count;
+}
+
+// Load service requests
+async function loadServiceRequests() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showError('Please login to view service requests');
+      document.getElementById('serviceRequestsList').innerHTML = `
+        <div class="text-center py-5">
+          <i class="fas fa-lock fa-3x text-muted mb-3"></i>
+          <h5 class="text-muted">Authentication Required</h5>
+          <p class="text-muted">Please login to view service requests.</p>
+          <a href="/login" class="btn btn-primary">Go to Login</a>
+        </div>
+      `;
+      return;
+    }
+    
+    console.log('Fetching service requests...');
+    const response = await fetch('/api/provider/service-requests', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('Response status:', response.status);
+    const data = await response.json();
+    console.log('Response data:', data);
+    
+    if (response.ok) {
+      allRequests = data.service_requests || [];
+      console.log('Loaded requests:', allRequests.length);
+      filterRequests(document.querySelector('input[name="requestFilter"]:checked').id);
+    } else {
+      console.error('Error response:', data);
+      
+      if (response.status === 401) {
+        showError('Session expired. Please login again.');
+        localStorage.removeItem('token');
+        document.getElementById('serviceRequestsList').innerHTML = `
+          <div class="text-center py-5">
+            <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
+            <h5 class="text-warning">Session Expired</h5>
+            <p class="text-muted">Your session has expired. Please login again.</p>
+            <a href="/login" class="btn btn-primary">Go to Login</a>
+          </div>
+        `;
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else if (response.status === 403) {
+        showError('Access denied. Provider account required.');
+        document.getElementById('serviceRequestsList').innerHTML = `
+          <div class="text-center py-5">
+            <i class="fas fa-ban fa-3x text-danger mb-3"></i>
+            <h5 class="text-danger">Access Denied</h5>
+            <p class="text-muted">${data.details || 'You need a provider account to access this page.'}</p>
+            <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+          </div>
+        `;
+      } else {
+        const errorMsg = data.error || 'Unknown error';
+        const errorDetails = data.details || '';
+        showError(`Failed to load service requests: ${errorMsg}${errorDetails ? ' - ' + errorDetails : ''}`);
+        document.getElementById('serviceRequestsList').innerHTML = `
+          <div class="alert alert-danger">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Error Loading Requests</h5>
+            <p>${errorMsg}</p>
+            ${errorDetails ? `<p class="small mb-0">${errorDetails}</p>` : ''}
+            <button class="btn btn-sm btn-danger mt-2" onclick="loadServiceRequests()">
+              <i class="fas fa-refresh me-1"></i>Try Again
+            </button>
+          </div>
+        `;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading service requests:', error);
+    showError('Error loading service requests: ' + error.message);
+    document.getElementById('serviceRequestsList').innerHTML = `
+      <div class="alert alert-danger">
+        <h5><i class="fas fa-exclamation-triangle me-2"></i>Connection Error</h5>
+        <p>Could not connect to the server. Please check your internet connection.</p>
+        <p class="small mb-0">${error.message}</p>
+        <button class="btn btn-sm btn-danger mt-2" onclick="loadServiceRequests()">
+          <i class="fas fa-refresh me-1"></i>Try Again
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Filter requests based on selection
+function filterRequests(filterId) {
+  let filteredRequests = [];
+  
+  switch(filterId) {
+    case 'allRequests':
+      filteredRequests = allRequests;
+      break;
+    case 'availableRequests':
+      filteredRequests = allRequests.filter(req => !req.has_quoted);
+      break;
+    case 'quotedRequests':
+      filteredRequests = allRequests.filter(req => req.has_quoted);
+      break;
+  }
+  
+  displayServiceRequests(filteredRequests);
+}
+
+// Display service requests
+function displayServiceRequests(requests) {
+  const requestsDiv = document.getElementById('serviceRequestsList');
+  
+  if (requests.length === 0) {
+    requestsDiv.innerHTML = `
+      <div class="text-center py-5">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No service requests found</h5>
+        <p class="text-muted">There are currently no service requests matching your filter.</p>
+        <button class="btn btn-primary" onclick="loadServiceRequests()">
+          <i class="fas fa-refresh me-1"></i>Refresh
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
+  requestsDiv.innerHTML = requests.map(req => {
+    const urgencyColors = {
+      'emergency': 'danger',
+      'urgent': 'warning',
+      'normal': 'primary',
+      'flexible': 'secondary'
+    };
+    
+    const urgencyIcons = {
+      'emergency': '🚨',
+      'urgent': '⚡',
+      'normal': '📋',
+      'flexible': '📅'
+    };
+    
+    const statusBadge = req.has_quoted ? 
+      (req.quote_status === 'selected' ? 
+        '<span class="badge bg-success">Selected</span>' : 
+        '<span class="badge bg-warning">Quoted</span>') : 
+      '<span class="badge bg-primary">Available</span>';
+    
+    return `
+      <div class="request-card border rounded-4 p-4 mb-4 shadow-sm hover-lift">
+        <div class="row">
+          <div class="col-md-8">
+            <div class="d-flex align-items-start mb-3">
+              <div class="me-3">
+                <span class="badge bg-${urgencyColors[req.urgency]} fs-6">
+                  ${urgencyIcons[req.urgency]} ${req.urgency.toUpperCase()}
+                </span>
+              </div>
+              <div class="flex-grow-1">
+                <h5 class="mb-1 fw-bold">${req.title}</h5>
+                <p class="mb-2 text-muted">${req.service_category} • ${req.distance}km away</p>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <p class="mb-2">${req.description}</p>
+              <p class="mb-0 text-muted">
+                <i class="fas fa-map-marker-alt me-1"></i>
+                ${req.location}
+              </p>
+            </div>
+            
+            ${req.preferred_date ? `
+            <div class="mb-3">
+              <small class="text-muted">
+                <i class="fas fa-calendar me-1"></i>
+                ${new Date(req.preferred_date).toLocaleDateString()}
+                ${req.preferred_time_slot ? ` - ${req.preferred_time_slot}` : ''}
+              </small>
+            </div>
+            ` : ''}
+            
+            <div class="small text-muted">
+              <i class="fas fa-clock me-1"></i>
+              Posted ${new Date(req.created_at).toLocaleString()}
+              ${req.quote_deadline ? ` • Deadline: ${new Date(req.quote_deadline).toLocaleString()}` : ''}
+            </div>
+          </div>
+          
+          <div class="col-md-4">
+            <div class="text-end">
+              <div class="mb-3">${statusBadge}</div>
+              
+              ${req.images && req.images.length > 0 ? `
+              <div class="mb-3">
+                <small class="text-muted">Images:</small>
+                <div class="d-flex gap-1 justify-content-end">
+                  ${req.images.slice(0, 3).map(img => `
+                    <img src="${img}" class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;" alt="Request image">
+                  `).join('')}
+                  ${req.images.length > 3 ? `<span class="small text-muted">+${req.images.length - 3}</span>` : ''}
+                </div>
+              </div>
+              ` : ''}
+              
+              <div class="d-grid gap-2">
+                ${!req.has_quoted ? `
+                <button class="btn btn-primary btn-lg" onclick="openQuoteModal('${req.id}')">
+                  <i class="fas fa-quote-left me-2"></i>Submit Quote
+                </button>
+                ` : `
+                <button class="btn btn-outline-secondary btn-lg" disabled>
+                  <i class="fas fa-check me-2"></i>Already Quoted
+                </button>
+                `}
+                <button class="btn btn-outline-info" onclick="viewRequestDetails('${req.id}')">
+                  <i class="fas fa-eye me-1"></i>View Details
+                </button>
+                <button class="btn btn-outline-success" onclick="toggleChat('${req.id}')">
+                  <i class="fas fa-comments me-1"></i>Chat
+                </button>
+                ${req.has_quoted ? `
+                <button class="btn btn-outline-danger" onclick="cancelQuote('${req.id}')">
+                  <i class="fas fa-times me-1"></i>Cancel Quote
+                </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Chat Section (Initially Hidden) -->
+        <div class="chat-section mt-4 d-none" id="chat-${req.id}">
+          <div class="card border-0 bg-light">
+            <div class="card-header bg-white border-bottom">
+              <div class="d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 fw-bold">
+                  <i class="fas fa-comments text-primary me-2"></i>
+                  Chat with Customer
+                </h6>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleChat('${req.id}')">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="chat-messages" id="messages-${req.id}" style="height: 300px; overflow-y: auto; padding: 1rem;">
+                <div class="text-center text-muted py-4">
+                  <i class="fas fa-comment-dots fa-2x mb-2"></i>
+                  <p>No messages yet. Start the conversation!</p>
+                </div>
+              </div>
+              <div class="chat-input border-top p-3 bg-white">
+                <div class="input-group">
+                  <input type="text" class="form-control" id="messageInput-${req.id}" placeholder="Type your message..." onkeypress="handleChatKeyPress(event, '${req.id}')">
+                  <button class="btn btn-primary" type="button" onclick="sendMessage('${req.id}')">
+                    <i class="fas fa-paper-plane"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Open notification request
+function openNotificationRequest(requestId) {
+  console.log('Opening notification request:', requestId);
+  currentRequestId = requestId;
+  
+  // First try to find the request in the current list
+  const requestCards = document.querySelectorAll('.request-card');
+  let foundRequest = null;
+  
+  requestCards.forEach(card => {
+    // Look for the request ID in various places in the card
+    const cardContent = card.innerHTML;
+    if (cardContent.includes(`'${requestId}'`) || 
+        cardContent.includes(`"${requestId}"`) ||
+        cardContent.includes(`openQuoteModal('${requestId}')`) ||
+        cardContent.includes(`viewRequestDetails('${requestId}')`)) {
+      foundRequest = card;
+    }
+  });
+  
+  if (foundRequest) {
+    console.log('Found request in current list');
+    // Scroll to the request and highlight it
+    foundRequest.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    foundRequest.style.backgroundColor = '#fff3cd';
+    foundRequest.style.borderColor = '#ffc107';
+    
+    // Check if the request allows quoting
+    const quoteButton = foundRequest.querySelector('button[onclick*="openQuoteModal"]');
+    const viewDetailsButton = foundRequest.querySelector('button[onclick*="viewRequestDetails"]');
+    
+    if (quoteButton) {
+      // Automatically open the quote modal
+      setTimeout(() => {
+        openQuoteModal(requestId);
+      }, 500);
+    } else if (viewDetailsButton) {
+      // Open details modal if already quoted
+      setTimeout(() => {
+        viewRequestDetails(requestId);
+      }, 500);
+    }
+    
+    // Remove highlight after 3 seconds
+    setTimeout(() => {
+      foundRequest.style.backgroundColor = '';
+      foundRequest.style.borderColor = '';
+    }, 3000);
+  } else {
+    // If request not found, refresh the list and try again
+    console.log('Request not found in current list, refreshing...');
+    showNotification('Loading request details...', 'info');
+    
+    // Refresh the service requests list
+    loadServiceRequests();
+    
+    // Try again after a delay
+    setTimeout(() => {
+      openNotificationRequest(requestId);
+    }, 2000);
+  }
+}
+
+// Open quote modal
+async function openQuoteModal(requestId) {
+  currentRequestId = requestId;
+  
+  try {
+    const response = await fetch(`/api/service-requests/${requestId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      displayRequestDetailsForQuote(data.service_request);
+      const modal = new bootstrap.Modal(document.getElementById('quoteModal'));
+      modal.show();
+    } else {
+      showNotification('Failed to load request details', 'error');
+    }
+  } catch (error) {
+    console.error('Error loading request details:', error);
+    showNotification('Error loading request details', 'error');
+  }
+}
+
+// Display request details for quote
+function displayRequestDetailsForQuote(request) {
+  const detailsDiv = document.getElementById('requestDetailsForQuote');
+  
+  detailsDiv.innerHTML = `
+    <div class="mb-3">
+      <h6 class="fw-bold">${request.title}</h6>
+      <p class="text-muted">${request.description}</p>
+    </div>
+    
+    <div class="row g-3">
+      <div class="col-6">
+        <small class="text-muted">
+          <i class="fas fa-map-marker-alt me-1"></i>
+          ${request.location}
+        </small>
+      </div>
+      <div class="col-6">
+        <small class="text-muted">
+          <i class="fas fa-tag me-1"></i>
+          ${request.service_category}
+        </small>
+      </div>
+      ${request.preferred_date ? `
+      <div class="col-6">
+        <small class="text-muted">
+          <i class="fas fa-calendar me-1"></i>
+          ${new Date(request.preferred_date).toLocaleDateString()}
+        </small>
+      </div>
+      ` : ''}
+      ${request.preferred_time_slot ? `
+      <div class="col-6">
+        <small class="text-muted">
+          <i class="fas fa-clock me-1"></i>
+          ${request.preferred_time_slot}
+        </small>
+      </div>
+      ` : ''}
+    </div>
+    
+    ${request.images && request.images.length > 0 ? `
+    <div class="mt-3">
+      <small class="text-muted">Images:</small>
+      <div class="row g-2 mt-1">
+        ${request.images.map(img => `
+          <div class="col-4">
+            <img src="${img}" class="img-fluid rounded" alt="Request image">
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+  `;
+}
+
+// Submit quote
+async function submitQuote() {
+  if (!currentRequestId) {
+    showNotification('No request selected', 'error');
+    return;
+  }
+  
+  const price = document.getElementById('quotePrice').value;
+  const estimatedDuration = document.getElementById('estimatedDuration').value;
+  const quoteNotes = document.getElementById('quoteNotes').value;
+  
+  console.log('Submitting quote:', { price, estimatedDuration, quoteNotes });
+  
+  if (!price || price <= 0) {
+    showNotification('Please enter a valid price', 'error');
+    document.getElementById('quotePrice').focus();
+    return;
+  }
+  
+  if (!estimatedDuration) {
+    showNotification('Please select estimated duration', 'error');
+    document.getElementById('estimatedDuration').focus();
+    return;
+  }
+  
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showNotification('Please login to submit a quote', 'error');
+      window.location.href = '/login';
+      return;
+    }
+    
+    const submitBtn = document.getElementById('submitQuoteBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+    
+    console.log(`Submitting quote to: /api/service-requests/${currentRequestId}/quote`);
+    
+    const response = await fetch(`/api/service-requests/${currentRequestId}/quote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        price: parseFloat(price),
+        estimated_duration: estimatedDuration,
+        quote_notes: quoteNotes
+      })
+    });
+    
+    console.log('Quote submission response status:', response.status);
+    const result = await response.json();
+    console.log('Quote submission result:', result);
+    
+    if (response.ok) {
+      showNotification('Quote submitted successfully! 🎉', 'success');
+      
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('quoteModal'));
+      if (modal) {
+        modal.hide();
+      }
+      
+      // Clear form
+      document.getElementById('quoteForm').reset();
+      currentRequestId = null;
+      
+      // Refresh the list
+      loadServiceRequests();
+      loadNotifications();
+    } else {
+      console.error('Error response:', result);
+      
+      if (response.status === 401) {
+        showNotification('Session expired. Please login again.', 'error');
+        localStorage.removeItem('token');
+        setTimeout(() => {
+        window.location.href = '/login';
+        }, 2000);
+      } else if (response.status === 403) {
+        showNotification('Access denied. ' + (result.details || 'Provider account required.'), 'error');
+      } else if (response.status === 400) {
+        const errorMsg = result.error || 'Invalid request';
+        const errorDetails = result.details || '';
+        showNotification(`${errorMsg}${errorDetails ? ': ' + errorDetails : ''}`, 'error');
+      } else {
+        const errorMsg = result.error || 'Unknown error';
+        const errorDetails = result.details || '';
+        showNotification(`Error submitting quote: ${errorMsg}${errorDetails ? ' - ' + errorDetails : ''}`, 'error');
+      }
+    }
+  } catch (error) {
+    console.error('Error submitting quote:', error);
+    showNotification('Network error. Please check your connection and try again.', 'error');
+  } finally {
+    const submitBtn = document.getElementById('submitQuoteBtn');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Quote';
+  }
+}
+
+// View request details
+async function viewRequestDetails(requestId) {
+  currentRequestId = requestId;
+  
+  try {
+    const response = await fetch(`/api/service-requests/${requestId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      displayRequestDetails(data.service_request);
+      const modal = new bootstrap.Modal(document.getElementById('requestDetailsModal'));
+      modal.show();
+    } else {
+      showNotification('Failed to load request details', 'error');
+    }
+  } catch (error) {
+    console.error('Error loading request details:', error);
+    showNotification('Error loading request details', 'error');
+  }
+}
+
+// Display request details
+function displayRequestDetails(request) {
+  const detailsDiv = document.getElementById('requestDetailsContent');
+  
+  detailsDiv.innerHTML = `
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="d-flex align-items-center mb-3">
+          <span class="badge bg-${request.urgency === 'emergency' ? 'danger' : request.urgency === 'urgent' ? 'warning' : 'primary'} me-2">
+            ${request.urgency.toUpperCase()}
+          </span>
+          <span class="badge bg-secondary">${request.service_category}</span>
+        </div>
+        <h6 class="fw-bold">${request.title}</h6>
+        <p class="text-muted">${request.description}</p>
+      </div>
+      <div class="col-md-6">
+        <strong>Service Category:</strong>
+        <p>${request.service_category}</p>
+      </div>
+      <div class="col-md-6">
+        <strong>Urgency:</strong>
+        <p><span class="badge bg-${request.urgency === 'emergency' ? 'danger' : request.urgency === 'urgent' ? 'warning' : 'primary'}">${request.urgency}</span></p>
+      </div>
+      <div class="col-md-6">
+        <strong>Location:</strong>
+        <p><i class="fas fa-map-marker-alt me-1"></i>${request.location}</p>
+      </div>
+      <div class="col-md-6">
+        <strong>Posted:</strong>
+        <p>${new Date(request.created_at).toLocaleString()}</p>
+      </div>
+      ${request.preferred_date ? `
+      <div class="col-md-6">
+        <strong>Preferred Date:</strong>
+        <p>${new Date(request.preferred_date).toLocaleDateString()}</p>
+      </div>
+      ` : ''}
+      ${request.preferred_time_slot ? `
+      <div class="col-md-6">
+        <strong>Preferred Time:</strong>
+        <p>${request.preferred_time_slot}</p>
+      </div>
+      ` : ''}
+      ${request.images && request.images.length > 0 ? `
+      <div class="col-12">
+        <strong>Images:</strong>
+        <div class="row g-2 mt-2">
+          ${request.images.map(img => `
+            <div class="col-md-4">
+              <img src="${img}" class="img-fluid rounded" alt="Request image">
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// Cancel quote
+async function cancelQuote(requestId) {
+  if (!confirm('Are you sure you want to cancel your quote for this service request?')) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/service-requests/${requestId}/cancel-quote`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      showNotification('Quote cancelled successfully!', 'success');
+      loadServiceRequests(); // Refresh the list
+    } else {
+      showNotification('Error cancelling quote: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    console.error('Error cancelling quote:', error);
+    showNotification('Error cancelling quote. Please try again.', 'error');
+  }
+}
+
+
+// Refresh requests
+function refreshRequests() {
+  loadServiceRequests();
+  loadNotifications();
+  showNotification('Requests refreshed', 'info');
+}
+
+// Show error
+function showError(message) {
+  document.getElementById('serviceRequestsList').innerHTML = `
+    <div class="alert alert-danger">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      ${message}
+    </div>
+  `;
+}
+
+// Chat functionality
+function toggleChat(requestId) {
+  const chatSection = document.getElementById(`chat-${requestId}`);
+  if (chatSection.classList.contains('d-none')) {
+    chatSection.classList.remove('d-none');
+    loadChatMessages(requestId);
+  } else {
+    chatSection.classList.add('d-none');
+  }
+}
+
+async function loadChatMessages(requestId) {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const response = await fetch(`/api/provider/conversations/${requestId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      displayChatMessages(requestId, data.messages || []);
+    }
+  } catch (error) {
+    console.error('Error loading chat messages:', error);
+  }
+}
+
+function displayChatMessages(requestId, messages) {
+  const messagesContainer = document.getElementById(`messages-${requestId}`);
+  
+  if (messages.length === 0) {
+    messagesContainer.innerHTML = `
+      <div class="text-center text-muted py-4">
+        <i class="fas fa-comment-dots fa-2x mb-2"></i>
+        <p>No messages yet. Start the conversation!</p>
+      </div>
+    `;
+    return;
+  }
+
+  messagesContainer.innerHTML = messages.map(msg => {
+    const isProvider = msg.sender_type === 'provider';
+    return `
+      <div class="message mb-3 ${isProvider ? 'text-end' : 'text-start'}">
+        <div class="d-inline-block ${isProvider ? 'bg-primary text-white' : 'bg-light'} p-3 rounded-3" style="max-width: 70%;">
+          <div class="message-text">${msg.message}</div>
+          <div class="message-time small ${isProvider ? 'text-white-50' : 'text-muted'} mt-1">
+            ${new Date(msg.timestamp).toLocaleTimeString()}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Scroll to bottom
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+async function sendMessage(requestId) {
+  const messageInput = document.getElementById(`messageInput-${requestId}`);
+  const message = messageInput.value.trim();
+  
+  if (!message) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const response = await fetch('/api/provider/send-message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        request_id: requestId,
+        message: message
+      })
+    });
+
+    if (response.ok) {
+      messageInput.value = '';
+      // Reload messages to show the new one
+      loadChatMessages(requestId);
+    } else {
+      showError('Failed to send message');
+    }
+  } catch (error) {
+    console.error('Error sending message:', error);
+    showError('Error sending message');
+  }
+}
+
+function handleChatKeyPress(event, requestId) {
+  if (event.key === 'Enter') {
+    sendMessage(requestId);
+  }
+}
+
+function addMessageToChat(requestId, messageData) {
+  const messagesContainer = document.getElementById(`messages-${requestId}`);
+  const isProvider = messageData.sender_type === 'provider';
+  
+  const messageElement = document.createElement('div');
+  messageElement.className = `message mb-3 ${isProvider ? 'text-end' : 'text-start'}`;
+  messageElement.innerHTML = `
+    <div class="d-inline-block ${isProvider ? 'bg-primary text-white' : 'bg-light'} p-3 rounded-3" style="max-width: 70%;">
+      <div class="message-text">${messageData.message}</div>
+      <div class="message-time small ${isProvider ? 'text-white-50' : 'text-muted'} mt-1">
+        ${new Date(messageData.timestamp).toLocaleTimeString()}
+      </div>
+    </div>
+  `;
+  
+  // Remove "no messages" placeholder if it exists
+  const placeholder = messagesContainer.querySelector('.text-center');
+  if (placeholder) {
+    placeholder.remove();
+  }
+  
+  messagesContainer.appendChild(messageElement);
+  
+  // Scroll to bottom
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show position-fixed`;
+  notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+  notification.innerHTML = `
+    <div class="d-flex align-items-center">
+      <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+      <span>${message}</span>
+      <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 5000);
+}
+</script>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<style>
+.hover-lift {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.notification-item {
+  transition: all 0.3s ease;
+}
+
+.notification-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.request-card {
+  transition: all 0.3s ease;
+}
+
+.request-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.provider-avatar img {
+  border: 3px solid rgba(255,255,255,0.3);
+}
+
+.form-control-lg {
+  font-size: 1.1rem;
+  padding: 0.75rem 1rem;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+}
+
+/* Custom scrollbar */
+.card-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.card-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.card-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+</style>
+{% endblock %}
+
+

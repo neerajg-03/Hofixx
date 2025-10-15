@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Provider Tracking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Test Provider Tracking</h1>
+        <p>This page allows you to test the provider tracking functionality.</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Test Parameters</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="providerId" class="form-label">Provider ID</label>
+                            <input type="text" class="form-control" id="providerId" value="507f1f77bcf86cd799439011" placeholder="Enter provider ID">
+                        </div>
+                        <div class="mb-3">
+                            <label for="bookingId" class="form-label">Booking ID (Optional)</label>
+                            <input type="text" class="form-control" id="bookingId" placeholder="Enter booking ID">
+                        </div>
+                        <div class="mb-3">
+                            <label for="userLat" class="form-label">User Latitude</label>
+                            <input type="number" class="form-control" id="userLat" value="28.6139" step="0.000001">
+                        </div>
+                        <div class="mb-3">
+                            <label for="userLon" class="form-label">User Longitude</label>
+                            <input type="number" class="form-control" id="userLon" value="77.2090" step="0.000001">
+                        </div>
+                        <button class="btn btn-primary" onclick="testTracking()">Test Tracking</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Test Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="testResults">
+                            <p class="text-muted">Click "Test Tracking" to see results</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Available Test Providers</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Use these provider IDs for testing:</p>
+                        <ul>
+                            <li><strong>Sanjay (Electrician):</strong> 507f1f77bcf86cd799439011</li>
+                            <li><strong>Sahil (Plumber):</strong> 507f1f77bcf86cd799439012</li>
+                        </ul>
+                        <p class="text-muted small">Note: These are example IDs. Use actual provider IDs from your database.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Open Tracking Page</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Click the button below to open the actual tracking page:</p>
+                        <button class="btn btn-success" onclick="openTrackingPage()">Open Tracking Page</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function testTracking() {
+            const providerId = document.getElementById('providerId').value;
+            const bookingId = document.getElementById('bookingId').value;
+            const userLat = document.getElementById('userLat').value;
+            const userLon = document.getElementById('userLon').value;
+            
+            if (!providerId) {
+                alert('Please enter a provider ID');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+            
+            // Test the tracking API
+            const url = `/providers/${providerId}/tracking-data?user_lat=${userLat}&user_lon=${userLon}${bookingId ? `&booking_id=${bookingId}` : ''}`;
+            
+            fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token') || 'test-token'}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6>API Response:</h6>
+                        <pre class="mb-0">${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6>Error:</h6>
+                        <p class="mb-0">${error.message}</p>
+                    </div>
+                `;
+            });
+        }
+        
+        function openTrackingPage() {
+            const providerId = document.getElementById('providerId').value;
+            const bookingId = document.getElementById('bookingId').value;
+            
+            if (!providerId) {
+                alert('Please enter a provider ID');
+                return;
+            }
+            
+            let url = `/track-provider?provider_id=${providerId}`;
+            if (bookingId) {
+                url += `&booking_id=${bookingId}`;
+            }
+            
+            window.open(url, '_blank');
+        }
+    </script>
+</body>
+</html>
