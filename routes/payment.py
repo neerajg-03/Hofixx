@@ -51,8 +51,8 @@ def test_create_order():
 
 # Initialize Razorpay client
 razorpay_client = razorpay.Client(
-    auth=(os.getenv('RAZORPAY_KEY_ID', 'rzp_test_ROb7lXNQKK4t1c'), 
-          os.getenv('RAZORPAY_KEY_SECRET', 'cR1Q452dHCJ6dy2ET4shqjOG'))
+    auth=(os.getenv('RAZORPAY_KEY_ID', 'rzp_live_RU6zHmtfyEB0WV'), 
+          os.getenv('RAZORPAY_KEY_SECRET', 'VDO0GlWQL5DSot22W1lGSH2l'))
 )
 
 @payment_bp.post('/payments/razorpay/create-order')
