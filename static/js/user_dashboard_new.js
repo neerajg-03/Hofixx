@@ -469,7 +469,7 @@
                 
                 // Open Razorpay checkout
                 const options = {
-                    key: 'rzp_test_ROb7lXNQKK4t1c', // Your Razorpay test key
+                    key: orderData.key_id, // Use key from server
                     amount: orderData.amount,
                     currency: orderData.currency,
                     name: 'Hoofix',
@@ -768,8 +768,12 @@
         }
         
         try {
+            // Get Razorpay key from server
+            const keyResponse = await fetch('/payments/razorpay/get-key');
+            const keyData = await keyResponse.json();
+            
             const options = {
-                key: 'rzp_test_ROb7lXNQKK4t1c', // Your Razorpay test key
+                key: keyData.key_id, // Use live key from server
                 amount: 10000, // ₹100 in paise
                 currency: 'INR',
                 name: 'Hoofix Test',
