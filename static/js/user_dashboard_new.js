@@ -120,11 +120,13 @@
         
         if (!userBookings || userBookings.length === 0) {
             container.style.display = 'none';
+            emptyState.classList.remove('d-none');
             emptyState.style.display = 'block';
             return;
         }
         
         container.style.display = 'block';
+        emptyState.classList.add('d-none');
         emptyState.style.display = 'none';
         
         // Filter bookings based on selected filter
@@ -732,11 +734,14 @@
         const empty = document.getElementById('emptyState');
         
         if (show) {
+            loading.classList.remove('d-none');
             loading.style.display = 'block';
             list.style.display = 'none';
+            empty.classList.add('d-none');
             empty.style.display = 'none';
         } else {
             loading.style.display = 'none';
+            loading.classList.add('d-none');
         }
     }
     
@@ -758,7 +763,7 @@
     }
     
     // Test Razorpay directly
-    function testRazorpayDirect() {
+    async function testRazorpayDirect() {
         console.log('Testing Razorpay directly...');
         console.log('Razorpay available:', typeof Razorpay !== 'undefined');
         
