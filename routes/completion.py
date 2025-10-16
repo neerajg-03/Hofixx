@@ -11,9 +11,9 @@ from werkzeug.utils import secure_filename
 
 completion_bp = Blueprint('completion', __name__)
 
-# Configure Razorpay
-RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', 'rzp_test_1234567890')
-RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', 'test_secret_key')
+# Configure Razorpay (Live Mode)
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', 'rzp_live_your_live_key_id_here')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', 'your_live_key_secret_here')
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
