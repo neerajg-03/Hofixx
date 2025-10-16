@@ -51,8 +51,8 @@ def test_create_order():
 
 # Initialize Razorpay client
 razorpay_client = razorpay.Client(
-    auth=(os.getenv('RAZORPAY_KEY_ID', 'rzp_live_RU6zHmtfyEB0WV'), 
-          os.getenv('RAZORPAY_KEY_SECRET', 'VDO0GlWQL5DSot22W1lGSH2l'))
+    auth=(os.getenv('RAZORPAY_KEY_ID', 'rzp_test_ROb7lXNQKK4t1c'), 
+          os.getenv('RAZORPAY_KEY_SECRET', 'cR1Q452dHCJ6dy2ET4shqjOG'))
 )
 
 @payment_bp.post('/payments/razorpay/create-order')
@@ -104,6 +104,13 @@ def create_razorpay_order():
     except Exception as e:
         print(f"Error creating Razorpay order: {e}")
         return jsonify({'message': 'Failed to create payment order'}), 500
+
+@payment_bp.get('/payments/razorpay/get-key')
+def get_razorpay_key():
+    """Get Razorpay key ID for frontend"""
+    return jsonify({
+        'key_id': os.getenv('RAZORPAY_KEY_ID', 'rzp_test_ROb7lXNQKK4t1c')
+    })
 
 @payment_bp.post('/payments/razorpay/verify')
 @jwt_required()
