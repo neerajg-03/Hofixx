@@ -93,15 +93,6 @@
             <button class="btn btn-outline-primary rounded-pill px-4 py-2 category-filter" data-category="ac">
               <i class="fas fa-snowflake me-2"></i>AC Repair
             </button>
-            <button class="btn btn-outline-primary rounded-pill px-4 py-2 category-filter" data-category="gardener">
-              <i class="fas fa-seedling me-2"></i>Gardener
-            </button>
-            <button class="btn btn-outline-primary rounded-pill px-4 py-2 category-filter" data-category="locksmith">
-              <i class="fas fa-key me-2"></i>Locksmith
-            </button>
-            <button class="btn btn-outline-primary rounded-pill px-4 py-2 category-filter" data-category="hvac">
-              <i class="fas fa-thermometer-half me-2"></i>HVAC
-            </button>
           </div>
         </div>
       </div>
@@ -305,7 +296,7 @@
           <p class="lead mb-0">Join thousands of satisfied customers who trust Hofix for their home service needs.</p>
         </div>
         <div class="col-lg-4 text-lg-end" data-aos="fade-left">
-          <a href="/booking" class="btn btn-light btn-lg px-4 py-3 rounded-pill shadow-lg hover-lift">
+          <a href="/booking-map" class="btn btn-light btn-lg px-4 py-3 rounded-pill shadow-lg hover-lift">
             <i class="fas fa-calendar-plus me-2"></i>Book Service Now
           </a>
         </div>
@@ -326,10 +317,7 @@ const serviceIcons = {
   'Carpenter': 'fas fa-hammer',
   'Cleaner': 'fas fa-broom',
   'Painter': 'fas fa-paint-brush',
-  'AC Repair': 'fas fa-snowflake',
-  'Gardener': 'fas fa-seedling',
-  'Locksmith': 'fas fa-key',
-  'HVAC Technician': 'fas fa-thermometer-half'
+  'AC Repair': 'fas fa-snowflake'
 };
 
 // Global variables
@@ -479,7 +467,7 @@ function renderGridView(services) {
           <span class="badge bg-success text-white">Popular</span>
         </div>
         <div class="d-flex gap-2">
-          <a href="/services/${service.id}" class="btn btn-outline-primary flex-fill">
+          <a href="/services/${service.id}/view" class="btn btn-outline-primary flex-fill">
             <i class="fas fa-eye me-1"></i>View
           </a>
           <a href="/booking-map?service_id=${service.id}" class="btn btn-primary flex-fill">
