@@ -405,6 +405,20 @@ body {
   letter-spacing: 0.5px;
 }
 
+/* Clickable booking rows */
+.booking-row {
+  transition: all 0.2s ease;
+}
+
+.booking-row:hover {
+  background-color: rgba(13, 110, 253, 0.05) !important;
+  transform: translateX(4px);
+}
+
+.booking-row td {
+  user-select: none;
+}
+
 /* Badge enhancements */
 .badge {
   font-size: 0.75rem;
