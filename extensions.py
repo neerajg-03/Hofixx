@@ -1,5 +1,12 @@
+from flask_jwt_extended import JWTManager
+from flask_bcrypt import Bcrypt
+from flask_socketio import SocketIO
 from mongoengine import connect
 import os
+
+jwt = JWTManager()
+bcrypt = Bcrypt()
+socketio = SocketIO(cors_allowed_origins="*")
 
 def init_mongodb():
     """Initialize MongoDB connection"""
@@ -7,10 +14,11 @@ def init_mongodb():
     if not mongodb_uri:
         raise ValueError("MONGODB_URI not found in environment variables")
 
-    # Explicitly set alias and database name
     connect(
         host=mongodb_uri,
         alias="default",
         db="HofixDb",
         connect=False
     )
+
+    print("✅ Connected to MongoDB successfully!")
