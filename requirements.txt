@@ -10,7 +10,7 @@ motor==3.3.2
 itsdangerous==2.2.0
 Werkzeug==3.0.4
 Jinja2==3.1.4
-requests==2.32.3
+requests==2.29.0
 simple-websocket==1.0.0
 gevent==24.2.1
 gevent-websocket==0.10.1
