@@ -371,9 +371,6 @@
                 <button class="btn btn-warning rounded-pill px-4 py-2" onclick="refreshDashboard()">
                   <i class="fas fa-sync-alt me-2"></i>Refresh Dashboard
                 </button>
-                <button class="btn btn-outline-primary rounded-pill px-4 py-2" onclick="testRazorpayDirect()">
-                  <i class="fas fa-credit-card me-2"></i>Test Razorpay
-                </button>
               </div>
             </div>
           </div>
@@ -388,14 +385,14 @@
               <div class="d-flex align-items-center justify-content-between">
                 <h5 class="fw-bold mb-0">Your Bookings</h5>
                 <div class="btn-group btn-group-sm" role="group">
-                  <input type="radio" class="btn-check" name="bookingFilter" id="allBookings" autocomplete="off" checked>
-                  <label class="btn btn-outline-primary" for="allBookings">All</label>
+                  <input type="radio" class="btn-check" name="bookingFilter" id="filterAllBookings" autocomplete="off" checked>
+                  <label class="btn btn-outline-primary" for="filterAllBookings">All</label>
                   
-                  <input type="radio" class="btn-check" name="bookingFilter" id="activeBookings" autocomplete="off">
-                  <label class="btn btn-outline-primary" for="activeBookings">Active</label>
-                  
-                  <input type="radio" class="btn-check" name="bookingFilter" id="completedBookings" autocomplete="off">
-                  <label class="btn btn-outline-primary" for="completedBookings">Completed</label>
+                  <input type="radio" class="btn-check" name="bookingFilter" id="filterActiveBookings" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="filterActiveBookings">Active</label>
+
+                  <input type="radio" class="btn-check" name="bookingFilter" id="filterCompletedBookings" autocomplete="off">
+                  <label class="btn btn-outline-primary" for="filterCompletedBookings">Completed</label>
                 </div>
               </div>
             </div>
@@ -426,6 +423,58 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Feedback Section -->
+      <div class="row mt-4">
+          <div class="col-12">
+              <div class="card">
+                  <div class="card-header">
+                      <h5 class="mb-0">
+                          <i class="fas fa-star me-2"></i>Share Your Experience
+                      </h5>
+                  </div>
+                  <div class="card-body">
+                      <p class="text-muted mb-4">Help us improve by sharing your feedback about our services</p>
+                      
+                      <form id="userFeedbackForm">
+                          <div class="row">
+                              <div class="col-md-6 mb-3">
+                                  <label for="userFeedbackTitle" class="form-label">Review Title *</label>
+                                  <input type="text" class="form-control" id="userFeedbackTitle" placeholder="e.g., Excellent service!" required>
+                              </div>
+                              <div class="col-md-6 mb-3">
+                                  <label for="userFeedbackRating" class="form-label">Rating *</label>
+                                  <div class="rating-input">
+                                      <div class="star-rating" id="userFeedbackRating">
+                                          <input type="radio" name="userRating" value="5" id="userStar5" required>
+                                          <label for="userStar5" class="star">★</label>
+                                          <input type="radio" name="userRating" value="4" id="userStar4">
+                                          <label for="userStar4" class="star">★</label>
+                                          <input type="radio" name="userRating" value="3" id="userStar3">
+                                          <label for="userStar3" class="star">★</label>
+                                          <input type="radio" name="userRating" value="2" id="userStar2">
+                                          <label for="userStar2" class="star">★</label>
+                                          <input type="radio" name="userRating" value="1" id="userStar1">
+                                          <label for="userStar1" class="star">★</label>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                          
+                          <div class="mb-3">
+                              <label for="userFeedbackMessage" class="form-label">Your Experience *</label>
+                              <textarea class="form-control" id="userFeedbackMessage" rows="3" 
+                                        placeholder="Tell us about your experience..." required></textarea>
+                          </div>
+                          
+                          <button type="submit" class="btn btn-primary">
+                              <i class="fas fa-paper-plane me-2"></i>Submit Feedback
+                          </button>
+                      </form>
+                  </div>
+              </div>
+          </div>
       </div>
     </div>
   </section>
@@ -507,11 +556,44 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/user_dashboard_new.js') }}"></script>
+
+<style>
+/* Star Rating Styles for User Dashboard */
+.rating-input {
+  display: flex;
+  justify-content: center;
+  margin: 0.5rem 0;
+}
+
+.star-rating {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 0.25rem;
+}
+
+.star-rating input[type="radio"] {
+  display: none;
+}
+
+.star-rating label {
+  font-size: 1.5rem;
+  color: #ddd;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.star-rating input[type="radio"]:checked ~ label,
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+  color: #ffc107;
+}
+</style>
 {% endblock %}
 
