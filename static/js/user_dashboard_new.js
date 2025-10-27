@@ -18,6 +18,15 @@
     // Initialize dashboard components
     async function initializeDashboard() {
         try {
+            // Check for token in URL first (from OAuth redirect)
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('token');
+            if (urlToken) {
+                // Store token in localStorage and clean URL
+                localStorage.setItem('token', urlToken);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
             // Check authentication
             const token = localStorage.getItem('token');
             if (!token) {
@@ -134,11 +143,14 @@
         let filteredBookings = userBookings;
         
         switch(filter) {
-            case 'activeBookings':
+            case 'filterActiveBookings':
                 filteredBookings = userBookings.filter(b => ['Pending', 'Accepted', 'In Progress'].includes(b.status));
                 break;
-            case 'completedBookings':
+            case 'filterCompletedBookings':
                 filteredBookings = userBookings.filter(b => b.status === 'Completed');
+                break;
+            case 'filterAllBookings':
+                // Show all bookings (no filtering needed)
                 break;
         }
         
@@ -762,51 +774,44 @@
         }, 3000);
     }
     
-    // Test Razorpay directly
-    async function testRazorpayDirect() {
-        console.log('Testing Razorpay directly...');
-        console.log('Razorpay available:', typeof Razorpay !== 'undefined');
-        
-        if (typeof Razorpay === 'undefined') {
-            showNotification('Razorpay not loaded! Check console for details.', 'error');
-            return;
-        }
-        
-        try {
-            // Get Razorpay key from server
-            const keyResponse = await fetch('/payments/razorpay/get-key');
-            const keyData = await keyResponse.json();
+    // User feedback form submission
+    const userFeedbackForm = document.getElementById('userFeedbackForm');
+    if (userFeedbackForm) {
+        userFeedbackForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
             
-            const options = {
-                key: keyData.key_id, // Use live key from server
-                amount: 10000, // ₹100 in paise
-                currency: 'INR',
-                name: 'Hoofix Test',
-                description: 'Direct Razorpay Test',
-                order_id: 'test_order_' + Date.now(),
-                handler: function(response) {
-                    showNotification('✅ Payment successful! ID: ' + response.razorpay_payment_id, 'success');
-                },
-                modal: {
-                    ondismiss: function() {
-                        showNotification('⚠️ Payment cancelled', 'warning');
-                    }
-                },
-                theme: {
-                    color: '#667eea'
-                }
+            const formData = {
+                name: user.name || 'User',
+                email: user.email,
+                title: document.getElementById('userFeedbackTitle').value,
+                rating: document.querySelector('input[name="userRating"]:checked').value,
+                message: document.getElementById('userFeedbackMessage').value
             };
             
-            console.log('Opening Razorpay with options:', options);
-            const rzp = new Razorpay(options);
-            rzp.open();
-            
-            showNotification('🔄 Opening Razorpay payment window...', 'info');
-            
-        } catch (error) {
-            console.error('Error:', error);
-            showNotification('❌ Error: ' + error.message, 'error');
-        }
+            try {
+                const response = await fetch('/api/feedback/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Thank you for your feedback! Your review has been submitted.', 'success');
+                    userFeedbackForm.reset();
+                } else {
+                    showNotification(result.error || 'Failed to submit feedback', 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                showNotification('Failed to submit feedback. Please try again.', 'error');
+            }
+        });
     }
+    
 })();
 
