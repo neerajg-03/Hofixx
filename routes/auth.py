@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template, make_response
+from flask import Blueprint, request, jsonify, render_template, make_response, redirect
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 from werkzeug.utils import secure_filename
 import os
@@ -11,12 +11,259 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.get('/login')
 def login_page():
-    return render_template('login.html')
+    google_client_id = os.getenv('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID')
+    return render_template('login.html', google_client_id=google_client_id)
 
 
 @auth_bp.get('/signup')
 def signup_page():
-    return render_template('signup.html')
+    google_client_id = os.getenv('GOOGLE_CLIENT_ID', 'YOUR_GOOGLE_CLIENT_ID')
+    return render_template('signup.html', google_client_id=google_client_id)
+
+@auth_bp.get('/test-google')
+def test_google_auth():
+    return render_template('test_google_auth.html')
+
+@auth_bp.get('/test-client-id')
+def test_client_id():
+    return render_template('test_client_id.html')
+
+@auth_bp.get('/auth/google')
+def google_auth_redirect():
+    """Alternative Google authentication route"""
+    from urllib.parse import urlencode
+    import os
+    
+    # Google OAuth parameters
+    client_id = os.getenv('GOOGLE_CLIENT_ID', '695218588985-pg6cfc385ddagv1np90b3uietqsg5hvc.apps.googleusercontent.com')
+    redirect_uri = request.url_root + 'auth/google/callback'
+    scope = 'openid email profile'
+    state = 'random_state_string'  # In production, use a secure random string
+    
+    # Build Google OAuth URL
+    params = {
+        'client_id': client_id,
+        'redirect_uri': redirect_uri,
+        'scope': scope,
+        'response_type': 'code',
+        'state': state
+    }
+    
+    google_auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+    
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Redirecting to Google...</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                text-align: center;
+                padding: 50px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }}
+            .container {{
+                background: rgba(255, 255, 255, 0.1);
+                padding: 30px;
+                border-radius: 15px;
+                max-width: 400px;
+                margin: 0 auto;
+            }}
+            .spinner {{
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #3498db;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 2s linear infinite;
+                margin: 20px auto;
+            }}
+            @keyframes spin {{
+                0% {{ transform: rotate(0deg); }}
+                100% {{ transform: rotate(360deg); }}
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Redirecting to Google...</h2>
+            <div class="spinner"></div>
+            <p>Please wait while we redirect you to Google for authentication.</p>
+            <p>If you are not redirected automatically, <a href="{google_auth_url}" style="color: #fff; text-decoration: underline;">click here</a>.</p>
+        </div>
+        <script>
+            // Redirect to Google OAuth
+            window.location.href = "{google_auth_url}";
+        </script>
+    </body>
+    </html>
+    '''
+
+@auth_bp.get('/auth/google/callback')
+def google_auth_callback():
+    """Handle Google OAuth callback"""
+    code = request.args.get('code')
+    state = request.args.get('state')
+    error = request.args.get('error')
+    
+    if error:
+        return f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Authentication Error</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f8f9fa; }}
+                .error {{ background: #f8d7da; color: #721c24; padding: 20px; border-radius: 10px; max-width: 400px; margin: 0 auto; }}
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h3>Authentication Error</h3>
+                <p>Error: {error}</p>
+                <a href="/login" style="color: #721c24;">Back to Login</a>
+            </div>
+        </body>
+        </html>
+        ''', 400
+    
+    if not code:
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Authentication Error</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f8f9fa; }
+                .error { background: #f8d7da; color: #721c24; padding: 20px; border-radius: 10px; max-width: 400px; margin: 0 auto; }
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h3>Authentication Error</h3>
+                <p>No authorization code received from Google.</p>
+                <a href="/login" style="color: #721c24;">Back to Login</a>
+            </div>
+        </body>
+        </html>
+        ''', 400
+    
+    try:
+        # Exchange authorization code for access token
+        import requests
+        
+        client_id = os.getenv('GOOGLE_CLIENT_ID', '1033624663631-bm5caule4l7cdpcp7cdgcqoe7p214afu.apps.googleusercontent.com')
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+        if not client_secret:
+            return f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Configuration Error</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f8f9fa; }}
+                    .error {{ background: #fff3cd; color: #856404; padding: 20px; border-radius: 10px; max-width: 500px; margin: 0 auto; }}
+                </style>
+            </head>
+            <body>
+                <div class="error">
+                    <h3>Google OAuth Configuration Missing</h3>
+                    <p>Please set the <code>GOOGLE_CLIENT_SECRET</code> environment variable.</p>
+                    <p><strong>Steps to fix:</strong></p>
+                    <ol style="text-align: left;">
+                        <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                        <li>Create OAuth 2.0 credentials</li>
+                        <li>Set environment variable: <code>GOOGLE_CLIENT_SECRET=your_secret_here</code></li>
+                    </ol>
+                    <a href="/login" style="color: #856404;">Back to Login</a>
+                </div>
+            </body>
+            </html>
+            ''', 500
+        redirect_uri = request.url_root + 'auth/google/callback'
+        
+        # Exchange code for tokens
+        token_url = 'https://oauth2.googleapis.com/token'
+        token_data = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'code': code,
+            'grant_type': 'authorization_code',
+            'redirect_uri': redirect_uri
+        }
+        
+        token_response = requests.post(token_url, data=token_data)
+        token_response.raise_for_status()
+        tokens = token_response.json()
+        
+        # Get user info from Google
+        user_info_url = f"https://www.googleapis.com/oauth2/v2/userinfo?access_token={tokens['access_token']}"
+        user_response = requests.get(user_info_url)
+        user_response.raise_for_status()
+        user_info = user_response.json()
+        
+        # Extract user information
+        google_id = user_info['id']
+        email = user_info['email']
+        name = user_info.get('name', '')
+        picture = user_info.get('picture', '')
+        
+        # Check if user exists
+        user = User.objects(email=email).first()
+        
+        if user:
+            # User exists, update Google ID if not set
+            if not user.google_id:
+                user.google_id = google_id
+                user.save()
+        else:
+            # Create new user
+            user = User(
+                name=name,
+                email=email,
+                role='user',
+                avatar_path=picture,
+                password_hash='',  # No password for OAuth users
+                google_id=google_id
+                # phone field is optional and not set for OAuth users
+            )
+            user.save()
+        
+        # Create JWT token
+        token = create_access_token(identity=str(user.id), additional_claims={
+            'role': user.role, 
+            'name': user.name, 
+            'email': user.email
+        })
+        
+        # Set JWT cookie and redirect to dashboard with token
+        response = make_response(redirect(f'/dashboard/user/new?token={token}'))
+        set_access_cookies(response, token)
+        return response
+        
+    except Exception as e:
+        print(f"Google OAuth callback error: {str(e)}")
+        return f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Authentication Error</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f8f9fa; }}
+                .error {{ background: #f8d7da; color: #721c24; padding: 20px; border-radius: 10px; max-width: 400px; margin: 0 auto; }}
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h3>Authentication Error</h3>
+                <p>Failed to complete Google authentication: {str(e)}</p>
+                <a href="/login" style="color: #721c24;">Back to Login</a>
+            </div>
+        </body>
+        </html>
+        ''', 500
 
 
 @auth_bp.post('/signup')
