@@ -1,5 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
 import os
 import sys
 from datetime import timedelta
@@ -72,7 +70,6 @@ def create_app():
     from routes.completion import completion_bp
     from routes.dashboard import dashboard_bp
     from routes.payment import payment_bp
-    from routes.chat import chat_bp
     from routes.service_request import service_request_bp
 
     app.register_blueprint(auth_bp, url_prefix='/')
@@ -82,7 +79,6 @@ def create_app():
     app.register_blueprint(completion_bp, url_prefix='/')
     app.register_blueprint(dashboard_bp, url_prefix='/')
     app.register_blueprint(payment_bp, url_prefix='/')
-    app.register_blueprint(chat_bp, url_prefix='/')
     app.register_blueprint(service_request_bp, url_prefix='/')
 
     @app.route('/')
@@ -104,6 +100,10 @@ def create_app():
     @app.route('/test-tracking')
     def test_tracking_page():
         return render_template('test_tracking.html')
+    
+    @app.route('/provider/navigation')
+    def provider_navigation_page():
+        return render_template('provider_navigation.html')
     
     @app.route('/simulate-movement', methods=['POST'])
     def simulate_movement():
