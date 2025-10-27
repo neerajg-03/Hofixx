@@ -534,3 +534,105 @@ def cancel_booking(booking_id):
     
     return jsonify({'success': True, 'message': 'Booking cancelled successfully'})
 
+
+@booking_bp.get('/bookings/<booking_id>/navigation')
+@jwt_required()
+def get_booking_navigation(booking_id):
+    """Get booking data for provider navigation"""
+    try:
+        ident = get_jwt_identity()
+        user_id = str(ident) if isinstance(ident, str) else str(ident['id'])
+        user = User.objects(id=ObjectId(user_id)).first()
+        
+        if not user or not user.provider_profile:
+            return jsonify({'error': 'Not authorized'}), 403
+        
+        booking = Booking.objects(id=ObjectId(booking_id)).first()
+        if not booking:
+            return jsonify({'error': 'Booking not found'}), 404
+        
+        # Verify this provider is assigned to this booking
+        if not booking.provider or booking.provider.id != user.provider_profile.id:
+            return jsonify({'error': 'Not authorized for this booking'}), 403
+        
+        # Get user details
+        booking_user = booking.user
+        if not booking_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        navigation_data = {
+            'user_name': booking_user.name,
+            'user_phone': booking_user.phone,
+            'service_name': booking.service_name or (booking.service.name if booking.service else 'Service'),
+            'price': booking.price,
+            'status': booking.status,
+            'scheduled_time': booking.scheduled_time.isoformat() if booking.scheduled_time else None,
+            'destination': {
+                'lat': booking.location_lat,
+                'lon': booking.location_lon
+            }
+        }
+        
+        return jsonify(navigation_data)
+        
+    except Exception as e:
+        print(f"Error getting booking navigation: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to get navigation data'}), 500
+
+
+# Chat API Endpoint
+@booking_bp.post('/api/chat/send')
+@jwt_required()
+def send_chat_message():
+    """Send a chat message"""
+    try:
+        ident = get_jwt_identity()
+        user_id = str(ident) if isinstance(ident, str) else str(ident['id'])
+        user = User.objects(id=ObjectId(user_id)).first()
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        booking_id = data.get('booking_id')
+        sender_type = data.get('sender_type')
+        message_type = data.get('type', 'text')
+        content = data.get('content')
+        
+        if not booking_id or not sender_type or not content:
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        booking = Booking.objects(id=ObjectId(booking_id)).first()
+        if not booking:
+            return jsonify({'error': 'Booking not found'}), 404
+        
+        # Create a simple message response (we'll use Socket.IO to handle the actual persistence)
+        message_data = {
+            'booking_id': booking_id,
+            'sender_id': user_id,
+            'sender_type': sender_type,
+            'type': message_type,
+            'content': content,
+            'timestamp': datetime.utcnow().isoformat(),
+            'status': 'sent'
+        }
+        
+        # Emit via Socket.IO
+        socketio.emit('new_message', {
+            'id': f'msg_{int(datetime.utcnow().timestamp() * 1000)}',
+            'booking_id': booking_id,
+            'sender_type': sender_type,
+            'sender_name': user.name,
+            'type': message_type,
+            'content': content,
+            'timestamp': datetime.utcnow().isoformat()
+        }, room=f'booking_{booking_id}')
+        
+        return jsonify(message_data)
+        
+    except Exception as e:
+        print(f"Error sending chat message: {e}")
+        return jsonify({'error': 'Failed to send message'}), 500
+
