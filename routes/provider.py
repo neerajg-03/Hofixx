@@ -884,3 +884,31 @@ def get_traffic_conditions():
         'description': f"Traffic is {random.choice(['light', 'moderate', 'heavy']).lower()}"
     }
 
+
+@provider_bp.get('/api/provider/current-location')
+@jwt_required()
+def get_current_provider_location():
+    """Get the authenticated provider's current location from their profile"""
+    try:
+        ident = get_jwt_identity()
+        user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+        
+        user = User.objects(id=ObjectId(user_id)).first()
+        if not user or user.role != 'provider':
+            return jsonify({'error': 'Provider not found'}), 404
+        
+        if not user.latitude or not user.longitude:
+            return jsonify({'error': 'Location not set in provider profile'}), 404
+        
+        return jsonify({
+            'lat': user.latitude,
+            'lng': user.longitude,
+            'address': user.address
+        }), 200
+        
+    except Exception as e:
+        print(f"Error fetching provider location: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch provider location'}), 500
+
