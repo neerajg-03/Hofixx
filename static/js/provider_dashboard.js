@@ -448,6 +448,17 @@
     
     bookings.slice(0, 10).forEach(booking => {
       const row = document.createElement('tr');
+      row.style.cursor = 'pointer';
+      row.className = 'booking-row';
+      
+      // Make entire row clickable
+      row.addEventListener('click', function(e) {
+        // Don't trigger if clicking on action buttons
+        if (!e.target.closest('button') && !e.target.closest('.btn-group')) {
+          openBookingDetails(booking.id);
+        }
+      });
+      
       row.innerHTML = `
         <td>
           <div class="d-flex align-items-center">
@@ -475,7 +486,7 @@
           <div class="small">${formatDate(booking.created_at)}</div>
         </td>
         <td>
-          <div class="btn-group btn-group-sm">
+          <div class="btn-group btn-group-sm" onclick="event.stopPropagation()">
             <button class="btn btn-outline-primary btn-sm" onclick="viewJobDetails('${booking.id}')">
               <i class="fas fa-eye"></i>
             </button>
@@ -500,9 +511,18 @@
           </div>
         </td>
       `;
+      
       tbody.appendChild(row);
     });
   }
+  
+  // Function to open booking details page
+  function openBookingDetails(bookingId) {
+    window.location.href = `/provider/navigation?booking_id=${bookingId}`;
+  }
+  
+  // Global function for opening booking details
+  window.openBookingDetails = openBookingDetails;
 
   // Initialize earnings chart
   function initializeEarningsChart(bookings) {
