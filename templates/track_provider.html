@@ -173,25 +173,28 @@
 
 <!-- Chat Modal -->
 <div class="modal fade" id="chatModal" tabindex="-1" aria-labelledby="chatModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content chat-modal">
       <div class="modal-header chat-header">
         <div class="d-flex align-items-center">
           <div class="chat-avatar me-3">
-            <img id="chatProviderAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Provider&backgroundColor=c7a2ff" 
-                 alt="Provider" class="rounded-circle" width="40" height="40">
+            <img id="chatProviderAvatar" src="" alt="Provider" class="rounded-circle">
             <div class="online-indicator"></div>
           </div>
           <div>
             <h5 class="modal-title mb-0" id="chatProviderName">Provider Name</h5>
-            <small class="text-muted" id="chatProviderStatus">Online</small>
+            <small class="opacity-75" id="chatServiceName">Service</small>
           </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body chat-body p-0">
         <div class="chat-messages" id="chatMessages">
-          <!-- Messages will be loaded here -->
+          <div class="chat-empty-state">
+            <i class="fas fa-comments"></i>
+            <h6>Start a conversation</h6>
+            <p class="small">Send a message to your provider to get started</p>
+          </div>
         </div>
         <div class="chat-typing-indicator d-none" id="typingIndicator">
           <div class="typing-dots">
@@ -203,25 +206,28 @@
         </div>
       </div>
       <div class="modal-footer chat-footer">
-        <div class="input-group">
-          <input type="text" class="form-control chat-input" id="messageInput" 
-                 placeholder="Type your message..." maxlength="500">
-          <button class="btn btn-primary" type="button" id="sendMessageBtn">
-            <i class="fas fa-paper-plane"></i>
-          </button>
-        </div>
-        <div class="chat-actions mt-2">
-          <button class="btn btn-outline-secondary btn-sm" id="attachFileBtn">
-            <i class="fas fa-paperclip me-1"></i>Attach
-          </button>
-          <button class="btn btn-outline-info btn-sm" id="sendLocationBtn">
-            <i class="fas fa-map-marker-alt me-1"></i>Location
-          </button>
+        <div class="w-100">
+          <div class="input-group mb-2">
+            <input type="text" class="form-control chat-input" id="messageInput" 
+                   placeholder="Type your message..." maxlength="500">
+            <button class="btn btn-primary" type="button" id="sendMessageBtn">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+          <div class="chat-actions">
+            <button class="btn btn-outline-secondary btn-sm" id="attachFileBtn">
+              <i class="fas fa-paperclip me-1"></i>Attach
+            </button>
+            <button class="btn btn-outline-info btn-sm" id="sendLocationBtn">
+              <i class="fas fa-map-marker-alt me-1"></i>Location
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -241,6 +247,9 @@
   let currentUserLocation = null;
   let currentProviderLocation = null;
   let routeWaypoints = [];
+  let chatMessages = [];
+  let isTyping = false;
+  let typingTimeout;
   
   // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -635,7 +644,7 @@
       console.log('Connected to tracking server');
       showNotification('Connected to real-time tracking', 'success');
       
-      // Join user room for chat messages
+      // Join user room and booking room for chat messages
       const token = getAuthToken();
       if (token) {
         try {
@@ -645,6 +654,12 @@
           if (userId) {
             socket.emit('join_user_room', { user_id: userId });
             console.log(`User ${userId} joined socket room for chat`);
+          }
+          
+          // Join booking room for chat
+          if (bookingId) {
+            socket.emit('join_booking_room', { booking_id: bookingId });
+            console.log(`User joined booking room: ${bookingId}`);
           }
         } catch (error) {
           console.error('Error parsing token for WebSocket room:', error);
@@ -667,7 +682,7 @@
             id: Date.now(),
             sender_type: data.sender_type,
             sender_name: data.sender_name,
-            content: data.message,
+            content: data.content,
             timestamp: data.timestamp,
             type: 'text'
           });
@@ -928,25 +943,6 @@
     document.body.appendChild(alertDiv);
   }
   
-  // Chat functionality
-  let chatMessages = [];
-  let isTyping = false;
-  let typingTimeout;
-  
-  // Open chat modal
-  function openChatModal() {
-    const modal = new bootstrap.Modal(document.getElementById('chatModal'));
-    modal.show();
-    
-    // Update chat header with provider info
-    document.getElementById('chatProviderName').textContent = document.getElementById('providerName').textContent;
-    
-    // Load chat history
-    loadChatHistory();
-    
-    // Setup chat event listeners
-    setupChatEventListeners();
-  }
   
   // Setup chat event listeners
   function setupChatEventListeners() {
@@ -1341,6 +1337,27 @@
   
   // Initialize chat socket events
   setupChatSocketEvents();
+  
+  // Function to open chat modal
+  function openChatModal() {
+    // Update chat header with provider info
+    const providerName = document.getElementById('providerName').textContent;
+    const serviceName = document.getElementById('serviceName').textContent;
+    
+    document.getElementById('chatProviderName').textContent = providerName;
+    document.getElementById('chatServiceName').textContent = serviceName;
+    document.getElementById('chatProviderAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${providerName}&backgroundColor=0d6efd`;
+    
+    // Show modal
+    const chatModal = new bootstrap.Modal(document.getElementById('chatModal'));
+    chatModal.show();
+    
+    // Load chat history
+    loadChatHistory();
+    
+    // Setup chat event listeners
+    setupChatEventListeners();
+  }
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
