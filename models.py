@@ -6,10 +6,10 @@ import os
 
 class User(Document):
     name = fields.StringField(max_length=120, required=True)
-    email = fields.EmailField(required=True, unique=True)
-    phone = fields.StringField(max_length=30)
+    email = fields.EmailField(unique=True)  # Made optional for OTP users
+    phone = fields.StringField(max_length=30, unique=True, null=True)  # Made unique for OTP users, null allowed for OAuth
     role = fields.StringField(max_length=20, required=True, choices=['user', 'provider', 'admin'])
-    password_hash = fields.StringField(max_length=255, required=True)
+    password_hash = fields.StringField(max_length=255)  # Made optional for OAuth/OTP users
     # Optional geolocation and human-readable address
     latitude = fields.FloatField()
     longitude = fields.FloatField()
@@ -19,12 +19,19 @@ class User(Document):
     rating = fields.FloatField(default=5.0)
     created_at = fields.DateTimeField(default=datetime.utcnow)
     
+    # OAuth fields
+    google_id = fields.StringField(max_length=100, unique=True)
+    
+    # Firebase Authentication fields
+    firebase_uid = fields.StringField(max_length=100, unique=True)
+    profile_picture = fields.StringField(max_length=500)
+    
     # Reference to provider profile
     provider_profile = fields.ReferenceField('Provider')
     
     meta = {
         'collection': 'users',
-        'indexes': ['email', 'role']
+        'indexes': ['email', 'phone', 'role', 'google_id', 'firebase_uid']
     }
 
 
@@ -127,32 +134,6 @@ class ServiceCompletion(Document):
     }
 
 
-class ChatMessage(Document):
-    """Model for chat messages between users and providers"""
-    booking = fields.ReferenceField('Booking', required=False)  # Optional for service request chats
-    service_request = fields.ReferenceField('ServiceRequest', required=False)  # For service request chats
-    sender = fields.ReferenceField('User', required=True)
-    sender_type = fields.StringField(required=True, choices=['user', 'provider'])
-    message_type = fields.StringField(required=True, choices=['text', 'file', 'location'])
-    content = fields.StringField()  # For text messages
-    message = fields.StringField()  # For text messages (alias for content)
-    file_name = fields.StringField()  # For file messages
-    file_url = fields.StringField()  # For file messages
-    location = fields.DictField()  # For location messages: {lat, lon, address}
-    status = fields.StringField(default='sent', choices=['sent', 'delivered', 'read'])
-    created_at = fields.DateTimeField(default=datetime.utcnow)
-    
-    # Additional fields for easier querying
-    booking_id = fields.StringField()  # Optional for service request chats
-    service_request_id = fields.StringField()  # For service request chats
-    provider_id = fields.StringField()
-    customer_name = fields.StringField()
-    provider_name = fields.StringField()
-    
-    meta = {
-        'collection': 'chat_messages',
-        'indexes': ['booking', 'booking_id', 'service_request', 'service_request_id', 'sender', 'created_at', 'sender_type']
-    }
 
 
 class ServiceRequest(Document):
@@ -244,6 +225,23 @@ class ProviderNotification(Document):
     meta = {
         'collection': 'provider_notifications',
         'indexes': ['provider', 'is_read', 'created_at']
+    }
+
+
+class Feedback(Document):
+    user = fields.ReferenceField('User', required=True)
+    name = fields.StringField(max_length=100, required=True)
+    email = fields.EmailField(required=True)
+    rating = fields.IntField(required=True, min_value=1, max_value=5)
+    title = fields.StringField(max_length=200, required=True)
+    message = fields.StringField(max_length=1000, required=True)
+    is_featured = fields.BooleanField(default=False)  # For displaying on homepage
+    is_approved = fields.BooleanField(default=False)  # Admin approval
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    meta = {
+        'collection': 'feedback',
+        'indexes': ['user', 'rating', 'is_featured', 'is_approved', 'created_at']
     }
 
 
