@@ -4,10 +4,10 @@ Flask-Bcrypt==1.0.1
 Flask-SocketIO==5.3.6
 Flask-CORS==4.0.0
 python-dotenv==1.0.1
-mongoengine==0.29.0          # ✅ upgrade — works with latest pymongo
-pymongo==4.8.0               # ✅ stable with MongoDB Atlas + Render
-dnspython==2.6.1             # ✅ compatible with pymongo 4.8
-motor==3.6.0                 # ✅ (optional, but safer with pymongo 4.8)
+mongoengine==0.29.0
+pymongo==4.10.1          # ✅ Compatible with both motor and mongoengine
+dnspython==2.6.1          # ✅ Fixes ignore_errors issue
+motor==3.6.0              # ✅ Works with pymongo 4.10.1
 itsdangerous==2.2.0
 Werkzeug==3.0.4
 Jinja2==3.1.4
