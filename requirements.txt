@@ -20,4 +20,5 @@ redis==5.0.1
 gunicorn==21.2.0
 firebase-admin==6.4.0
 pyrebase4==4.7.1
-eventlet==0.33.3
+eventlet==0.37.0
+
