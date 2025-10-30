@@ -7,7 +7,7 @@ import os
 class User(Document):
     name = fields.StringField(max_length=120, required=True)
     email = fields.EmailField(unique=True)  # Made optional for OTP users
-    phone = fields.StringField(max_length=30, unique=True, null=True)  # Made unique for OTP users, null allowed for OAuth
+    phone = fields.StringField(max_length=30, unique=True, sparse=True, null=True)
     role = fields.StringField(max_length=20, required=True, choices=['user', 'provider', 'admin'])
     password_hash = fields.StringField(max_length=255)  # Made optional for OAuth/OTP users
     # Optional geolocation and human-readable address
