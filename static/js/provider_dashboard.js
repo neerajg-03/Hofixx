@@ -405,7 +405,27 @@
       const name = claims?.name || 'Provider';
       const initials = encodeURIComponent(name.split(' ').map(p => p[0]).join('').slice(0, 2));
       document.getElementById('providerAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${initials}&backgroundColor=c7a2ff`;
-      
+      // Load current availability and set button state
+      try {
+        const meResp = await fetch('/me', { headers: { 'Authorization': `Bearer ${token}` }});
+        if (meResp.ok) {
+          const me = await meResp.json();
+          const avail = me?.provider_profile?.availability;
+          const btn = document.getElementById('toggleAvailability');
+          if (btn && typeof avail === 'boolean') {
+            if (avail) {
+              btn.innerHTML = '<i class="fas fa-toggle-on me-2"></i>Available';
+              btn.classList.remove('btn-secondary');
+              btn.classList.add('btn-light');
+            } else {
+              btn.innerHTML = '<i class="fas fa-toggle-off me-2"></i>Unavailable';
+              btn.classList.remove('btn-light');
+              btn.classList.add('btn-secondary');
+            }
+          }
+        }
+      } catch(e) {}
+
     const r = await fetch('/bookings/provider', { headers: { 'Authorization': `Bearer ${token}` }});
     if (!r.ok) return;
       
@@ -459,6 +479,7 @@
         }
       });
       
+      const paymentBadge = (booking.has_payment ? `<span class="badge bg-success">Paid</span>` : `<span class="badge bg-warning text-dark">Unpaid</span>`);
       row.innerHTML = `
         <td>
           <div class="d-flex align-items-center">
@@ -479,7 +500,10 @@
           </div>
         </td>
         <td>
-          <span class="badge bg-${getStatusColor(booking.status)}">${booking.status}</span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-${getStatusColor(booking.status)}">${booking.status}</span>
+            ${booking.status === 'Completed' ? paymentBadge : ''}
+          </div>
         </td>
         <td class="fw-semibold">₹${booking.price || 0}</td>
         <td>
@@ -505,6 +529,11 @@
                 <i class="fas fa-check-circle"></i>
               </button>
             ` : ''}
+            ${booking.status === 'Completed' && !booking.has_payment ? `
+              <button class="btn btn-outline-success btn-sm" onclick="markCashPaid('${booking.id}')" title="Mark Cash Payment">
+                <i class="fas fa-rupee-sign"></i>
+              </button>
+            ` : ''}
             ${booking.status === 'Completed' ? `
               <span class="badge bg-success">Completed</span>
             ` : ''}
@@ -514,6 +543,23 @@
       
       tbody.appendChild(row);
     });
+  }
+
+  // Provider marks a booking as cash paid
+  window.markCashPaid = async function(bookingId){
+    try{
+      const token = localStorage.getItem('token');
+      const r = await fetch('/payments/mark-cash', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ booking_id: bookingId })});
+      const res = await r.json();
+      if (r.ok){
+        showNotification('Marked as paid (Cash).', 'success');
+        await loadProviderBookings();
+      } else {
+        showNotification(res.message || 'Failed to mark cash payment', 'warning');
+      }
+    } catch(e){
+      showNotification('Failed to mark cash payment', 'warning');
+    }
   }
   
   // Function to open booking details page
@@ -587,18 +633,31 @@
   // Setup provider event listeners
   function setupProviderEventListeners() {
     // Availability toggle
-    document.getElementById('toggleAvailability')?.addEventListener('click', function() {
-      const isAvailable = this.classList.contains('btn-light');
-      if (isAvailable) {
-        this.innerHTML = '<i class="fas fa-toggle-off me-2"></i>Unavailable';
-        this.classList.remove('btn-light');
-        this.classList.add('btn-secondary');
-      } else {
-        this.innerHTML = '<i class="fas fa-toggle-on me-2"></i>Available';
-        this.classList.remove('btn-secondary');
-        this.classList.add('btn-light');
+    document.getElementById('toggleAvailability')?.addEventListener('click', async function() {
+      const wasAvailable = this.classList.contains('btn-light');
+      const newAvailability = !wasAvailable;
+      try {
+        const resp = await fetch('/api/provider/availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ availability: newAvailability })
+        });
+        if (!resp.ok) throw new Error('Failed');
+        // Update UI only after success
+        if (newAvailability) {
+          this.innerHTML = '<i class="fas fa-toggle-on me-2"></i>Available';
+          this.classList.remove('btn-secondary');
+          this.classList.add('btn-light');
+          showNotification('You are now available', 'info');
+        } else {
+          this.innerHTML = '<i class="fas fa-toggle-off me-2"></i>Unavailable';
+          this.classList.remove('btn-light');
+          this.classList.add('btn-secondary');
+          showNotification('You are now unavailable', 'info');
+        }
+      } catch (e) {
+        showNotification('Could not update availability. Please try again.', 'warning');
       }
-      showNotification(isAvailable ? 'You are now unavailable' : 'You are now available', 'info');
     });
 
     // Job filter buttons
@@ -784,11 +843,107 @@
             container.appendChild(serviceCard);
           });
         }
+        
+        // Load daily rates after loading services
+        await loadDailyRates(skills, provider?.daily_rates || {});
       }
     } catch (error) {
       console.error('Error loading my services:', error);
     }
   }
+
+  // Load daily rates for services
+  async function loadDailyRates(services, existingRates = {}) {
+    try {
+      const container = document.getElementById('dailyRatesList');
+      container.innerHTML = '';
+      
+      if (!services || services.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-3">
+            <i class="fas fa-calendar-day text-muted mb-2" style="font-size: 2rem;"></i>
+            <p class="text-muted small mb-0">Add services first to set daily rates</p>
+          </div>
+        `;
+        return;
+      }
+      
+      services.forEach(service => {
+        const rateCard = document.createElement('div');
+        rateCard.className = 'daily-rate-item p-3 rounded-3 bg-light mb-3';
+        const currentRate = existingRates[service] || '';
+        rateCard.innerHTML = `
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center">
+              <div class="service-icon-small me-2">
+                <i class="${getServiceIcon(service)} text-primary"></i>
+              </div>
+              <span class="fw-semibold">${service}</span>
+            </div>
+          </div>
+          <div class="input-group">
+            <span class="input-group-text bg-white">₹</span>
+            <input type="number" 
+                   class="form-control daily-rate-input" 
+                   data-service="${service}"
+                   placeholder="Enter daily rate"
+                   value="${currentRate}"
+                   min="100"
+                   step="50">
+            <span class="input-group-text bg-white">/day</span>
+          </div>
+          <small class="text-muted">Daily rate for this service</small>
+        `;
+        container.appendChild(rateCard);
+      });
+    } catch (error) {
+      console.error('Error loading daily rates:', error);
+    }
+  }
+
+  // Save daily rates
+  window.saveDailyRates = async function() {
+    try {
+      const inputs = document.querySelectorAll('.daily-rate-input');
+      const dailyRates = {};
+      let hasValidRates = false;
+      
+      inputs.forEach(input => {
+        const service = input.dataset.service;
+        const rate = parseFloat(input.value);
+        if (rate && rate > 0) {
+          dailyRates[service] = rate;
+          hasValidRates = true;
+        }
+      });
+      
+      if (!hasValidRates) {
+        toast('Please enter at least one daily rate');
+        return;
+      }
+      
+      const response = await fetch('/api/provider/daily-rates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ daily_rates: dailyRates })
+      });
+      
+      if (response.ok) {
+        toast('Daily rates saved successfully!');
+        const result = await response.json();
+        console.log('Daily rates updated:', result.daily_rates);
+      } else {
+        const result = await response.json();
+        toast(result.error || 'Failed to save daily rates');
+      }
+    } catch (error) {
+      console.error('Error saving daily rates:', error);
+      toast('Failed to save daily rates');
+    }
+  };
 
   // Load available services for dropdown
   async function loadAvailableServices() {
@@ -886,15 +1041,17 @@
           <div class="modal-body">
             <form id="completionForm" enctype="multipart/form-data">
               <div class="mb-3">
-                <label class="form-label fw-semibold">Completion Notes</label>
+                <label class="form-label fw-semibold">Completion Notes <span class="text-danger">*</span></label>
                 <textarea class="form-control" id="completionNotes" rows="4" 
-                          placeholder="Describe what work was completed..."></textarea>
+                          placeholder="Describe what work was completed..." required></textarea>
+                <div class="invalid-feedback">Completion notes are required</div>
               </div>
               <div class="mb-3">
-                <label class="form-label fw-semibold">Upload Completion Images</label>
+                <label class="form-label fw-semibold">Upload Completion Images <span class="text-danger">*</span></label>
                 <input type="file" class="form-control" id="completionImages" 
-                       multiple accept="image/*" />
-                <div class="form-text">Upload photos showing the completed work (optional)</div>
+                       multiple accept="image/*" required />
+                <div class="form-text">Upload photos showing the completed work</div>
+                <div class="invalid-feedback">At least one completion image is required</div>
               </div>
               <div id="completionMsg" class="alert alert-info d-none">
                 <i class="fas fa-info-circle me-2"></i>
@@ -918,8 +1075,36 @@
     
     // Handle form submission
     modal.querySelector('#submitCompletion').addEventListener('click', async function() {
-      const completionNotes = modal.querySelector('#completionNotes').value;
+      const completionNotes = modal.querySelector('#completionNotes').value.trim();
       const images = modal.querySelector('#completionImages').files;
+      const notesTextarea = modal.querySelector('#completionNotes');
+      const imagesInput = modal.querySelector('#completionImages');
+      const form = modal.querySelector('#completionForm');
+      
+      // Reset validation
+      notesTextarea.classList.remove('is-invalid');
+      imagesInput.classList.remove('is-invalid');
+      
+      // Validate fields
+      let isValid = true;
+      
+      if (!completionNotes || completionNotes.length === 0) {
+        notesTextarea.classList.add('is-invalid');
+        isValid = false;
+      }
+      
+      if (!images || images.length === 0) {
+        imagesInput.classList.add('is-invalid');
+        isValid = false;
+      }
+      
+      if (!isValid) {
+        const msg = modal.querySelector('#completionMsg');
+        msg.className = 'alert alert-danger';
+        msg.querySelector('span').textContent = 'Please fill in all required fields (Completion Notes and at least one image)';
+        msg.classList.remove('d-none');
+        return;
+      }
       
       try {
         const formData = new FormData();
