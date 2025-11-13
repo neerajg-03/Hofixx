@@ -1,10 +1,11 @@
-from flask import Blueprint, request, jsonify, render_template, make_response, redirect
+from flask import Blueprint, request, jsonify, render_template, make_response, redirect, url_for
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 from werkzeug.utils import secure_filename
 import os
 from extensions import bcrypt
 from models import User, Provider
 from bson import ObjectId
+import uuid
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -238,8 +239,15 @@ def google_auth_callback():
             'email': user.email
         })
         
-        # Set JWT cookie and redirect to dashboard with token
-        response = make_response(redirect(f'/dashboard/user/new?token={token}'))
+        # Set JWT cookie and redirect based on role
+        if user.role == 'admin':
+            redirect_url = '/admin'
+        elif user.role == 'provider':
+            redirect_url = '/dashboard-provider'
+        else:
+            redirect_url = f'/dashboard/user/new?token={token}'
+        
+        response = make_response(redirect(redirect_url))
         set_access_cookies(response, token)
         return response
         
@@ -274,15 +282,17 @@ def signup():
     phone = data.get('phone')
     password = data.get('password')
     role = (data.get('role') or 'user').lower()
+    phone_verified = str(data.get('phone_verified') or '').lower() in ('true', '1', 'yes')
 
     if not all([name, email, password, role]):
-        return jsonify({'message': 'Missing fields'}), 400
+        return jsonify({'message': 'Missing required fields'}), 400
 
+    # Phone is optional, but if provided, we can mark it as verified
     if User.objects(email=email).first():
         return jsonify({'message': 'Email already exists'}), 400
 
     password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-    user = User(name=name, email=email, phone=phone, role=role, password_hash=password_hash)
+    user = User(name=name, email=email, phone=phone if phone else None, role=role, password_hash=password_hash, phone_verified=phone_verified if phone else False)
     user.save()
 
     if role == 'provider':
@@ -404,16 +414,55 @@ def get_current_user():
         return jsonify({'message': 'Invalid user ID'}), 400
 
 
+@auth_bp.get('/api/user/profile')
+@jwt_required()
+def get_user_profile_api():
+    """API endpoint used by frontend to fetch the logged-in user's profile"""
+    try:
+        ident = get_jwt_identity()
+        # Handle different JWT identity formats
+        if isinstance(ident, dict):
+            user_id = str(ident.get('id') or ident.get('user_id') or ident)
+        elif isinstance(ident, str):
+            user_id = str(ident)
+        else:
+            user_id = str(ident)
+
+        try:
+            user = User.objects(id=ObjectId(user_id)).first()
+        except Exception:
+            user = User.objects(id=user_id).first()
+
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        avatar_url = None
+        if user.avatar_path:
+            avatar_url = url_for('static', filename=user.avatar_path, _external=True)
+
+        return jsonify({
+            'id': str(user.id),
+            'name': user.name,
+            'email': user.email,
+            'phone': user.phone,
+            'role': user.role,
+            'address': user.address,
+            'latitude': user.latitude,
+            'longitude': user.longitude,
+            'avatar_url': avatar_url,
+            'credits': user.credits or 0,
+            'rating': user.rating or 0
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'message': f'Error loading profile: {str(e)}'}), 500
+
+
 @auth_bp.get('/profile')
 @jwt_required(optional=True)
 def profile_page():
     return render_template('profile.html')
-
-
-@auth_bp.get('/admin/services')
-@jwt_required(optional=True)
-def admin_services_page():
-    return render_template('admin_services.html')
 
 
 @auth_bp.get('/me')
@@ -551,3 +600,152 @@ def logout():
     response = make_response(jsonify({'message': 'Logged out successfully'}))
     unset_jwt_cookies(response)
     return response
+
+
+@auth_bp.delete('/profile/delete')
+@jwt_required()
+def delete_account():
+    ident = get_jwt_identity()
+    user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+    user = User.objects(id=user_id).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    try:
+        # If provider, remove provider profile as well
+        if user.provider_profile:
+            try:
+                user.provider_profile.delete()
+            except Exception:
+                pass
+        user.delete()
+        resp = make_response(jsonify({'message': 'Account deleted'}))
+        unset_jwt_cookies(resp)
+        return resp
+    except Exception as e:
+        return jsonify({'message': 'Failed to delete account'}), 500
+
+
+# Preferences API
+@auth_bp.get('/profile/preferences')
+@jwt_required()
+def get_preferences():
+    ident = get_jwt_identity()
+    user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+    user = User.objects(id=user_id).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    return jsonify({
+        'prefers_email_notifications': bool(user.prefers_email_notifications),
+        'prefers_sms_notifications': bool(user.prefers_sms_notifications),
+        'dark_mode': bool(user.dark_mode),
+        'language': user.language or 'en'
+    })
+
+
+@auth_bp.post('/profile/preferences')
+@jwt_required()
+def update_preferences():
+    ident = get_jwt_identity()
+    user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+    user = User.objects(id=user_id).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    data = request.get_json() or {}
+    if 'prefers_email_notifications' in data:
+        user.prefers_email_notifications = bool(data.get('prefers_email_notifications'))
+    if 'prefers_sms_notifications' in data:
+        user.prefers_sms_notifications = bool(data.get('prefers_sms_notifications'))
+    if 'dark_mode' in data:
+        user.dark_mode = bool(data.get('dark_mode'))
+    if 'language' in data:
+        user.language = str(data.get('language') or 'en')[:10]
+    user.save()
+    return jsonify({'message': 'Preferences updated'})
+
+
+# Saved addresses API
+@auth_bp.get('/profile/addresses')
+@jwt_required()
+def list_addresses():
+    ident = get_jwt_identity()
+    user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+    user = User.objects(id=user_id).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    addresses = []
+    for a in (user.saved_addresses or []):
+        addresses.append({
+            'uid': a.uid,
+            'label': a.label,
+            'address': a.address,
+            'latitude': a.latitude,
+            'longitude': a.longitude,
+            'is_default': bool(a.is_default)
+        })
+    return jsonify(addresses)
+
+
+@auth_bp.post('/profile/addresses')
+@jwt_required()
+def add_address():
+    from models import SavedAddress
+    ident = get_jwt_identity()
+    user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+    user = User.objects(id=user_id).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    data = request.get_json() or {}
+    try:
+        saved = SavedAddress(
+            uid=str(uuid.uuid4())[:8],
+            label=str(data.get('label') or 'Home')[:100],
+            address=str(data.get('address') or '')[:255],
+            latitude=float(data.get('latitude')),
+            longitude=float(data.get('longitude')),
+            is_default=bool(data.get('is_default', False))
+        )
+    except Exception:
+        return jsonify({'message': 'Invalid address payload'}), 400
+    if saved.is_default:
+        for a in (user.saved_addresses or []):
+            a.is_default = False
+    user.saved_addresses = (user.saved_addresses or []) + [saved]
+    user.save()
+    return jsonify({'message': 'Address added', 'uid': saved.uid})
+
+
+@auth_bp.post('/profile/addresses/<addr_uid>/default')
+@jwt_required()
+def set_default_address(addr_uid):
+    ident = get_jwt_identity()
+    user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+    user = User.objects(id=user_id).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    found = False
+    for a in (user.saved_addresses or []):
+        if a.uid == addr_uid:
+            a.is_default = True
+            found = True
+        else:
+            a.is_default = False
+    if not found:
+        return jsonify({'message': 'Address not found'}), 404
+    user.save()
+    return jsonify({'message': 'Default address updated'})
+
+
+@auth_bp.delete('/profile/addresses/<addr_uid>')
+@jwt_required()
+def delete_address(addr_uid):
+    ident = get_jwt_identity()
+    user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+    user = User.objects(id=user_id).first()
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    before = len(user.saved_addresses or [])
+    user.saved_addresses = [a for a in (user.saved_addresses or []) if a.uid != addr_uid]
+    if len(user.saved_addresses or []) == before:
+        return jsonify({'message': 'Address not found'}), 404
+    user.save()
+    return jsonify({'message': 'Address deleted'})
