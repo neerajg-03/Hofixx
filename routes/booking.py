@@ -12,14 +12,30 @@ booking_bp = Blueprint('booking', __name__)
 @booking_bp.get('/bookings/user')
 @jwt_required()
 def get_user_bookings():
-    ident = get_jwt_identity()
-    user_id = str(ident) if isinstance(ident, str) else str(ident['id'])
-    user = User.objects(id=ObjectId(user_id)).first()
-    if not user:
-        return jsonify({'message': 'User not found'}), 404
-    
-    bookings = Booking.objects(user=user).order_by('-created_at')
-    return jsonify([serialize_booking(b) for b in bookings])
+    try:
+        ident = get_jwt_identity()
+        # Handle different JWT identity formats
+        if isinstance(ident, dict):
+            user_id = str(ident.get('id') or ident.get('user_id') or ident)
+        elif isinstance(ident, str):
+            user_id = str(ident)
+        else:
+            user_id = str(ident)
+        
+        try:
+            user = User.objects(id=ObjectId(user_id)).first()
+        except Exception:
+            user = User.objects(id=user_id).first()
+        
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+        
+        bookings = Booking.objects(user=user).order_by('-created_at')
+        return jsonify([serialize_booking(b) for b in bookings])
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'message': f'Error loading bookings: {str(e)}'}), 500
 
 
 @booking_bp.get('/bookings/provider')
@@ -94,6 +110,7 @@ def create_booking():
         provider = None
     
     scheduled_time = data.get('scheduled_time')
+    booking_type = data.get('booking_type', 'hourly')  # 'hourly' or 'daily'
     try:
         price = float(data.get('price')) if data.get('price') not in (None, '',) else 0.0
     except Exception:
@@ -138,6 +155,16 @@ def create_booking():
         print(f"CRITICAL: No service found after auto-selection. Service ID provided: {data.get('service_id')}")
         return jsonify({'message': 'Service field is missing'}), 400
 
+    # Handle daily booking pricing
+    daily_rate = None
+    if booking_type == 'daily' and provider:
+        # Get daily rate from provider's daily_rates dict
+        daily_rates = provider.daily_rates or {}
+        service_name = service.name if service else None
+        if service_name and service_name in daily_rates:
+            daily_rate = float(daily_rates[service_name])
+            price = daily_rate  # Use daily rate as the price
+    
     booking = Booking(
         user=user,
         provider=provider,
@@ -151,7 +178,9 @@ def create_booking():
         provider_id=str(provider.id) if provider else None,
         provider_name=provider.user.name if provider and provider.user else None,
         has_payment=False,
-        payment_status='Pending'
+        payment_status='Pending',
+        booking_type=booking_type,
+        daily_rate=daily_rate
     )
     booking.save()
 
@@ -261,17 +290,48 @@ def mock_payment():
 @booking_bp.post('/bookings/accept')
 @jwt_required()
 def accept_booking():
+    ident = get_jwt_identity()
+    user_id = str(ident) if isinstance(ident, str) else str(ident['id'])
+    user = User.objects(id=ObjectId(user_id)).first()
+    
+    if not user or not user.provider_profile:
+        return jsonify({'message': 'Not a provider'}), 403
+    
+    provider = user.provider_profile
     data = request.get_json() or {}
     booking_id = str(data.get('booking_id'))
+    
     try:
         booking = Booking.objects(id=ObjectId(booking_id)).first()
         if not booking:
             return jsonify({'message': 'Booking not found'}), 404
+        
+        # Verify this booking is assigned to this provider
+        if not booking.provider or booking.provider.id != provider.id:
+            return jsonify({'message': 'Not authorized for this booking'}), 403
+        
+        # Check if provider is verified
+        if provider.verification_status != 'verified':
+            return jsonify({
+                'message': 'Verification required',
+                'details': 'Please complete your verification to accept bookings. Go to Provider Dashboard to start verification.'
+            }), 403
+        
+        # Check if provider has an active job in progress
+        active_booking = Booking.objects(provider=provider, status='In Progress').exclude(id=booking.id).first()
+        if active_booking:
+            return jsonify({
+                'message': 'Cannot accept new job',
+                'details': f'You have an active job in progress. Please complete your current job before accepting this booking.',
+                'active_booking_id': str(active_booking.id)
+            }), 400
+        
         booking.status = 'Accepted'
         booking.save()
         _broadcast_status(booking)
         return jsonify({'message': 'Accepted'})
     except Exception as e:
+        print(f"Error accepting booking: {e}")
         return jsonify({'message': 'Invalid booking ID'}), 400
 
 
@@ -363,7 +423,9 @@ def serialize_booking(b: Booking):
         'completed_at': b.completed_at.isoformat() if b.completed_at else None,
         'created_at': b.created_at.isoformat() if b.created_at else None,
         'has_payment': b.has_payment or (b.payment is not None),
-        'payment_status': b.payment_status or (b.payment.status if b.payment else 'Pending')
+        'payment_status': b.payment_status or (b.payment.status if b.payment else 'Pending'),
+        'booking_type': b.booking_type or 'hourly',
+        'daily_rate': b.daily_rate
     }
 
 
@@ -560,6 +622,37 @@ def get_booking_navigation(booking_id):
         if not booking_user:
             return jsonify({'error': 'User not found'}), 404
         
+        # Validate location data - check if location is valid (not None and not default)
+        destination_lat = None
+        destination_lon = None
+        
+        # Check booking location first
+        if (booking.location_lat and booking.location_lon and 
+            booking.location_lat != 0 and booking.location_lon != 0 and
+            booking.location_lat != 28.6139 and booking.location_lon != 77.2090):  # Not default Delhi coordinates
+            destination_lat = booking.location_lat
+            destination_lon = booking.location_lon
+            print(f"Using booking location: {destination_lat}, {destination_lon}")
+        
+        # If booking doesn't have valid location, try user profile
+        if not destination_lat or not destination_lon:
+            user_lat = getattr(booking_user, 'latitude', None)
+            user_lon = getattr(booking_user, 'longitude', None)
+            
+            if user_lat and user_lon and user_lat != 0 and user_lon != 0:
+                destination_lat = user_lat
+                destination_lon = user_lon
+                print(f"Using user profile location: {destination_lat}, {destination_lon}")
+        
+        # If still no location, return error with helpful message
+        if not destination_lat or not destination_lon:
+            print(f"ERROR: No valid location found. Booking location: {booking.location_lat}, {booking.location_lon}, User location: {getattr(booking_user, 'latitude', None)}, {getattr(booking_user, 'longitude', None)}")
+            return jsonify({
+                'error': 'Customer location not available',
+                'details': 'The booking does not have a valid location. Please contact the customer to get their address.',
+                'booking_location': {'lat': booking.location_lat, 'lon': booking.location_lon} if booking.location_lat and booking.location_lon else None
+            }), 400
+        
         navigation_data = {
             'user_name': booking_user.name,
             'user_phone': booking_user.phone,
@@ -568,9 +661,11 @@ def get_booking_navigation(booking_id):
             'status': booking.status,
             'scheduled_time': booking.scheduled_time.isoformat() if booking.scheduled_time else None,
             'destination': {
-                'lat': booking.location_lat,
-                'lon': booking.location_lon
-            }
+                'lat': float(destination_lat),
+                'lon': float(destination_lon),
+                'lng': float(destination_lon)  # Add lng alias for Google Maps compatibility
+            },
+            'destination_address': getattr(booking, 'location_address', None) or getattr(booking_user, 'address', None)
         }
         
         return jsonify(navigation_data)
