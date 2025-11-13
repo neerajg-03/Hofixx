@@ -4,11 +4,22 @@ from mongoengine import connect, disconnect_all
 import os
 
 
+class SavedAddress(EmbeddedDocument):
+    """Embedded document for user's saved addresses"""
+    uid = fields.StringField(required=True)
+    label = fields.StringField(max_length=100, required=True)
+    address = fields.StringField(max_length=255, required=True)
+    latitude = fields.FloatField(required=True)
+    longitude = fields.FloatField(required=True)
+    is_default = fields.BooleanField(default=False)
+
+
 class User(Document):
     name = fields.StringField(max_length=120, required=True)
     email = fields.EmailField(unique=True)  # Made optional for OTP users
-    phone = fields.StringField(max_length=30, unique=True, sparse=True, null=True)
-    role = fields.StringField(max_length=20, required=True, choices=['user', 'provider', 'admin'])
+    phone = fields.StringField(max_length=30, unique=True, null=True)  # Made unique for OTP users, null allowed for OAuth
+    phone_verified = fields.BooleanField(default=False)
+    role = fields.StringField(max_length=20, required=True, choices=['user', 'provider', 'shopkeeper', 'admin'])
     password_hash = fields.StringField(max_length=255)  # Made optional for OAuth/OTP users
     # Optional geolocation and human-readable address
     latitude = fields.FloatField()
@@ -19,6 +30,17 @@ class User(Document):
     rating = fields.FloatField(default=5.0)
     created_at = fields.DateTimeField(default=datetime.utcnow)
     
+    # Preferences and settings
+    prefers_email_notifications = fields.BooleanField(default=True)
+    prefers_sms_notifications = fields.BooleanField(default=False)
+    dark_mode = fields.BooleanField(default=False)
+    language = fields.StringField(max_length=10, default='en')
+    
+    # Referral/support
+    referral_code = fields.StringField(max_length=20)
+    referred_by = fields.StringField(max_length=120)
+    referral_bonus_claimed = fields.BooleanField(default=False)
+    
     # OAuth fields
     google_id = fields.StringField(max_length=100, unique=True)
     
@@ -26,12 +48,15 @@ class User(Document):
     firebase_uid = fields.StringField(max_length=100, unique=True)
     profile_picture = fields.StringField(max_length=500)
     
+    # Saved addresses
+    saved_addresses = fields.ListField(fields.EmbeddedDocumentField(SavedAddress))
+
     # Reference to provider profile
     provider_profile = fields.ReferenceField('Provider')
     
     meta = {
         'collection': 'users',
-        'indexes': ['email', 'phone', 'role', 'google_id', 'firebase_uid']
+        'indexes': ['email', 'phone', 'role', 'google_id', 'firebase_uid', 'referral_code']
     }
 
 
@@ -47,16 +72,41 @@ class Service(Document):
         'collection': 'services',
         'indexes': ['category', 'name']
     }
-
-
 class Provider(Document):
     user = fields.ReferenceField('User', required=True, unique=True)
     skills = fields.ListField(fields.StringField())  # List of skills instead of comma-separated
     availability = fields.BooleanField(default=True)
+    daily_rates = fields.DictField()  # Maps service name to daily rate, e.g., {"Electrician": 2000, "Plumber": 1800}
+    
+    # Verification fields
+    verification_status = fields.StringField(max_length=20, default='pending', 
+                                           choices=['pending', 'verified', 'rejected'])
+    # Document URLs
+    aadhaar_front_url = fields.StringField(max_length=500)
+    aadhaar_back_url = fields.StringField(max_length=500)
+    pan_url = fields.StringField(max_length=500)
+    selfie_url = fields.StringField(max_length=500)
+    skill_cert_url = fields.StringField(max_length=500)  # Optional
+    police_verification_url = fields.StringField(max_length=500)  # Optional
+    
+    # GPS location for address verification
+    verification_gps_lat = fields.FloatField()
+    verification_gps_lon = fields.FloatField()
+    verification_address = fields.StringField(max_length=500)
+    
+    # Admin fields
+    admin_remarks = fields.StringField()
+    verified_by = fields.ReferenceField('User')  # Admin who verified
+    verified_at = fields.DateTimeField()
+    rejected_at = fields.DateTimeField()
+    
+    # Verification timestamps
+    verification_submitted_at = fields.DateTimeField()
+    verification_updated_at = fields.DateTimeField(default=datetime.utcnow)
     
     meta = {
         'collection': 'providers',
-        'indexes': ['user', 'availability']
+        'indexes': ['user', 'availability', 'verification_status']
     }
 
 
@@ -92,6 +142,10 @@ class Booking(Document):
     # Reference to payment
     payment = fields.ReferenceField('Payment')
     
+    # Booking type and daily rate
+    booking_type = fields.StringField(max_length=20, default='hourly', choices=['hourly', 'daily'])
+    daily_rate = fields.FloatField()  # Daily rate if booking_type is 'daily'
+    
     meta = {
         'collection': 'bookings',
         'indexes': ['user', 'provider', 'service', 'status', 'created_at']
@@ -99,7 +153,8 @@ class Booking(Document):
 
 
 class Payment(Document):
-    booking = fields.ReferenceField('Booking', required=True, unique=True)
+    booking = fields.ReferenceField('Booking')  # Optional, for service bookings
+    order = fields.ReferenceField('Order')  # Optional, for shop orders
     user = fields.ReferenceField('User', required=True)
     amount = fields.FloatField(required=True)
     currency = fields.StringField(max_length=10, default='INR')
@@ -116,7 +171,46 @@ class Payment(Document):
     
     meta = {
         'collection': 'payments',
-        'indexes': ['booking', 'user', 'status']
+        'indexes': ['booking', 'order', 'user', 'status']
+    }
+
+
+class WalletTransaction(Document):
+    """Track wallet transactions for users."""
+    user = fields.ReferenceField('User', required=True)
+    amount = fields.FloatField(required=True)
+    transaction_type = fields.StringField(max_length=10, required=True,
+                                          choices=['credit', 'debit'])
+    source = fields.StringField(max_length=50, default='topup',
+                                choices=['topup', 'admin_bonus', 'referral_bonus',
+                                         'service_payment', 'refund', 'purchase', 'wallet_payment'])
+    description = fields.StringField()
+    balance_after = fields.FloatField()
+    external_reference = fields.StringField()
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+
+    meta = {
+        'collection': 'wallet_transactions',
+        'indexes': ['user', '-created_at', 'source', 'external_reference']
+    }
+
+
+class ReferralRequest(Document):
+    """Referral bonus requests awaiting admin approval."""
+    user = fields.ReferenceField('User', required=True)
+    referrer = fields.ReferenceField('User', required=True)
+    referral_code = fields.StringField(required=True)
+    bonus_new_user = fields.FloatField(default=0.0)
+    bonus_referrer = fields.FloatField(default=0.0)
+    status = fields.StringField(max_length=20, default='pending',
+                                choices=['pending', 'approved', 'rejected'])
+    admin_notes = fields.StringField()
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    processed_at = fields.DateTimeField()
+
+    meta = {
+        'collection': 'referral_requests',
+        'indexes': ['user', 'referrer', 'status', '-created_at']
     }
 
 
@@ -143,6 +237,7 @@ class ServiceRequest(Document):
     title = fields.StringField(max_length=200, required=True)
     description = fields.StringField(required=True)
     images = fields.ListField(fields.StringField())  # URLs of uploaded images
+    voice_description_url = fields.StringField()  # URL of uploaded voice description audio file
     location_lat = fields.FloatField(required=True)
     location_lon = fields.FloatField(required=True)
     location_address = fields.StringField(max_length=255, required=True)
@@ -242,6 +337,161 @@ class Feedback(Document):
     meta = {
         'collection': 'feedback',
         'indexes': ['user', 'rating', 'is_featured', 'is_approved', 'created_at']
+    }
+
+
+class ShopAd(Document):
+    name = fields.StringField(max_length=150, required=True)
+    category = fields.StringField(max_length=50, required=True)  # e.g., hardware, electricals, plumbing
+    address = fields.StringField(max_length=255)
+    contact_phone = fields.StringField(max_length=30)
+    contact_email = fields.EmailField()
+    website = fields.StringField(max_length=200)
+    image_path = fields.StringField(max_length=255)  # stored under static/images/shops
+    is_active = fields.BooleanField(default=True)
+    priority = fields.IntField(default=0)
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    meta = {
+        'collection': 'shop_ads',
+        'indexes': ['category', 'is_active', 'priority', '-created_at']
+    }
+
+
+class Shop(Document):
+    """Shop model for shopkeepers to register their shops"""
+    owner = fields.ReferenceField('User', required=True)  # Shopkeeper user
+    name = fields.StringField(max_length=150, required=True)
+    description = fields.StringField()
+    category = fields.ListField(fields.StringField(max_length=50), required=True)  # List of categories: hardware, electricals, plumbing, etc.
+    address = fields.StringField(max_length=255, required=True)
+    location_lat = fields.FloatField(required=True)
+    location_lon = fields.FloatField(required=True)
+    contact_phone = fields.StringField(max_length=30, required=True)
+    contact_email = fields.EmailField()
+    image_path = fields.StringField(max_length=255)  # Shop logo/image
+    is_active = fields.BooleanField(default=True)
+    is_verified = fields.BooleanField(default=False)  # Admin verification (deprecated - use verification_status)
+    rating = fields.FloatField(default=5.0)
+    total_orders = fields.IntField(default=0)
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    # Shopkeeper verification fields
+    verification_status = fields.StringField(max_length=20, default='pending', 
+                                           choices=['pending', 'verified', 'rejected'])
+    # Document URLs
+    shopkeeper_aadhaar_front_url = fields.StringField(max_length=500)
+    shopkeeper_aadhaar_back_url = fields.StringField(max_length=500)
+    shopkeeper_pan_url = fields.StringField(max_length=500)
+    shopkeeper_selfie_url = fields.StringField(max_length=500)
+    shop_license_url = fields.StringField(max_length=500)  # Shop license/GST certificate
+    police_verification_url = fields.StringField(max_length=500)  # Optional
+    
+    # GPS location for address verification
+    verification_gps_lat = fields.FloatField()
+    verification_gps_lon = fields.FloatField()
+    verification_address = fields.StringField(max_length=500)
+    
+    # Admin fields
+    admin_remarks = fields.StringField()
+    verified_by = fields.ReferenceField('User')  # Admin who verified
+    verified_at = fields.DateTimeField()
+    rejected_at = fields.DateTimeField()
+    
+    # Verification timestamps
+    verification_submitted_at = fields.DateTimeField()
+    verification_updated_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    meta = {
+        'collection': 'shops',
+        'indexes': ['owner', 'category', 'is_active', 'location_lat', 'location_lon', 'verification_status']
+    }
+
+
+class Product(Document):
+    """Product model for items available in shops"""
+    shop = fields.ReferenceField('Shop', required=True)
+    name = fields.StringField(max_length=200, required=True)
+    description = fields.StringField()
+    category = fields.StringField(max_length=100, required=True)  # e.g., 'wires', 'pipes', 'tools'
+    price = fields.FloatField(required=True)
+    stock_quantity = fields.IntField(default=0)
+    image_path = fields.StringField(max_length=255)  # Product image
+    is_available = fields.BooleanField(default=True)
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    updated_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    meta = {
+        'collection': 'products',
+        'indexes': ['shop', 'category', 'name', 'is_available']
+    }
+
+
+class Cart(Document):
+    """Shopping cart model for users"""
+    user = fields.ReferenceField('User', required=True)
+    items = fields.ListField(fields.DictField())  # List of {product_id, shop_id, quantity, price}
+    total_amount = fields.FloatField(default=0.0)
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    updated_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    meta = {
+        'collection': 'carts',
+        'indexes': ['user']
+    }
+
+
+class Order(Document):
+    """Order model for completed purchases"""
+    user = fields.ReferenceField('User', required=True)
+    shop = fields.ReferenceField('Shop', required=True)
+    items = fields.ListField(fields.DictField())  # List of {product_id, product_name, quantity, price}
+    total_amount = fields.FloatField(required=True)
+    delivery_address = fields.StringField(max_length=255, required=True)
+    delivery_lat = fields.FloatField(required=True)
+    delivery_lon = fields.FloatField(required=True)
+    contact_phone = fields.StringField(max_length=30, required=True)
+    
+    # Order status
+    status = fields.StringField(max_length=30, default='pending',
+                               choices=['pending', 'confirmed', 'preparing', 'ready', 'assigned', 'out_for_delivery', 'delivered', 'cancelled'])
+    
+    # Delivery partner
+    delivery_partner = fields.ReferenceField('DeliveryPartner')
+    
+    # Payment
+    payment_status = fields.StringField(max_length=30, default='pending',
+                                       choices=['pending', 'paid', 'failed', 'refunded'])
+    payment_method = fields.StringField(max_length=30, default='online',
+                                       choices=['Cash', 'Card', 'UPI', 'Bank Transfer', 'Razorpay'])
+    payment = fields.ReferenceField('Payment')  # Reference to payment if online
+    
+    # Timing
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    confirmed_at = fields.DateTimeField()
+    delivered_at = fields.DateTimeField()
+    
+    meta = {
+        'collection': 'orders',
+        'indexes': ['user', 'shop', 'status', 'created_at', 'delivery_lat', 'delivery_lon']
+    }
+
+
+class DeliveryPartner(Document):
+    """Delivery partner model for delivery personnel"""
+    user = fields.ReferenceField('User', required=True, unique=True)
+    vehicle_type = fields.StringField(max_length=50, default='bike')  # bike, car, etc.
+    vehicle_number = fields.StringField(max_length=20)
+    is_available = fields.BooleanField(default=True)
+    current_location_lat = fields.FloatField()
+    current_location_lon = fields.FloatField()
+    rating = fields.FloatField(default=5.0)
+    total_deliveries = fields.IntField(default=0)
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    meta = {
+        'collection': 'delivery_partners',
+        'indexes': ['user', 'is_available', 'current_location_lat', 'current_location_lon']
     }
 
 
