@@ -1,12 +1,12 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import uuid
 from bson import ObjectId
 
-from models import User, Provider, ServiceRequest, ProviderQuote, ProviderNotification
+from models import User, Provider, ServiceRequest, ProviderQuote, ProviderNotification, Booking
 from extensions import socketio
 
 service_request_bp = Blueprint('service_request', __name__)
@@ -14,8 +14,14 @@ service_request_bp = Blueprint('service_request', __name__)
 # Allowed file extensions for images
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
+# Allowed file extensions for audio
+ALLOWED_AUDIO_EXTENSIONS = {'webm', 'mp3', 'wav', 'ogg', 'm4a'}
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_audio_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_AUDIO_EXTENSIONS
 
 def save_uploaded_files(files, request_id):
     """Save uploaded files and return their URLs"""
@@ -42,6 +48,35 @@ def save_uploaded_files(files, request_id):
             saved_files.append(relative_url)
     
     return saved_files
+
+def save_audio_file(file, request_id):
+    """Save uploaded audio file and return its URL"""
+    if not file or not file.filename:
+        return None
+    
+    if not allowed_audio_file(file.filename):
+        return None
+    
+    upload_folder = os.path.join(current_app.static_folder, 'uploads', 'service_requests', str(request_id))
+    os.makedirs(upload_folder, exist_ok=True)
+    
+    # Generate unique filename
+    filename = secure_filename(file.filename)
+    unique_filename = f"{uuid.uuid4()}_{filename}"
+    file_path = os.path.join(upload_folder, unique_filename)
+    
+    file.save(file_path)
+    
+    # Return relative URL for serving
+    relative_url = f"/static/uploads/service_requests/{request_id}/{unique_filename}"
+    return relative_url
+
+def to_iso(dt):
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
 
 @service_request_bp.post('/api/service-requests')
 @jwt_required()
@@ -90,8 +125,23 @@ def create_service_request():
                 default_time = time_mapping.get(preferred_time, '14:00')
                 preferred_datetime = datetime.strptime(f"{preferred_date} {default_time}", "%Y-%m-%d %H:%M")
         
+        # Block new request if previous booking unpaid
+        unpaid = Booking.objects(user=user, status='Completed', has_payment=False).first()
+        if unpaid:
+            return jsonify({'error': 'You have an unpaid previous service. Please complete payment to book the next service.', 'unpaid_booking_id': str(unpaid.id)}), 400
+        
+        # Generate request ID for file organization
+        request_id = str(uuid.uuid4())
+        
         # Save uploaded images
-        images = save_uploaded_files(request.files.getlist('images'), str(uuid.uuid4()))
+        images = save_uploaded_files(request.files.getlist('images'), request_id)
+        
+        # Save voice description if provided
+        voice_description_url = None
+        if 'voice_description' in request.files:
+            voice_file = request.files.get('voice_description')
+            if voice_file and voice_file.filename:
+                voice_description_url = save_audio_file(voice_file, request_id)
         
         # Create service request
         service_request = ServiceRequest(
@@ -100,6 +150,7 @@ def create_service_request():
             title=f"{service_type.title()} Service Request",
             description=work_description,
             images=images,
+            voice_description_url=voice_description_url,
             location_lat=lat,
             location_lon=lon,
             location_address=location,
@@ -107,7 +158,7 @@ def create_service_request():
             preferred_date=preferred_datetime,
             preferred_time_slot=preferred_time,
             status='open',
-            quote_deadline=datetime.utcnow() + timedelta(hours=24),  # 24 hours for quotes
+            quote_deadline=datetime.utcnow() + timedelta(minutes=10),  # 10 minutes for quotes
             expires_at=datetime.utcnow() + timedelta(days=7)  # 7 days to expire
         )
         
@@ -245,13 +296,16 @@ def get_service_request(request_id):
                 'service_category': service_request.service_category,
                 'urgency': service_request.urgency,
                 'location': service_request.location_address,
+                'location_lat': service_request.location_lat,
+                'location_lon': service_request.location_lon,
                 'images': service_request.images,
-                'preferred_date': service_request.preferred_date.isoformat() if service_request.preferred_date else None,
+                'voice_description_url': service_request.voice_description_url or None,
+                'preferred_date': to_iso(service_request.preferred_date),
                 'preferred_time_slot': service_request.preferred_time_slot,
                 'status': service_request.status,
-                'created_at': service_request.created_at.isoformat(),
-                'quote_deadline': service_request.quote_deadline.isoformat() if service_request.quote_deadline else None,
-                'expires_at': service_request.expires_at.isoformat() if service_request.expires_at else None
+                'created_at': to_iso(service_request.created_at),
+                'quote_deadline': to_iso(service_request.quote_deadline),
+                'expires_at': to_iso(service_request.expires_at)
             },
             'quotes': [{
                 'id': str(quote.id),
@@ -262,7 +316,7 @@ def get_service_request(request_id):
                 'quote_notes': quote.quote_notes,
                 'quote_images': quote.quote_images,
                 'status': quote.status,
-                'submitted_at': quote.submitted_at.isoformat()
+                'submitted_at': to_iso(quote.submitted_at)
             } for quote in quotes]
         })
         
@@ -293,9 +347,9 @@ def get_user_service_requests():
                 'service_category': req.service_category,
                 'urgency': req.urgency,
                 'status': req.status,
-                'created_at': req.created_at.isoformat(),
-                'quote_deadline': req.quote_deadline.isoformat() if req.quote_deadline else None,
-                'expires_at': req.expires_at.isoformat() if req.expires_at else None
+                'created_at': to_iso(req.created_at),
+                'quote_deadline': to_iso(req.quote_deadline),
+                'expires_at': to_iso(req.expires_at)
             } for req in service_requests]
         })
         
@@ -308,43 +362,47 @@ def get_user_service_requests():
 def select_quote(request_id):
     """Select a quote and create a booking"""
     try:
-        # Get current user
         ident = get_jwt_identity()
         user_id = str(ident) if isinstance(ident, str) else str(ident['id'])
         user = User.objects(id=ObjectId(user_id)).first()
-        
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        # Get request data
-        data = request.get_json()
+        data = request.get_json() or {}
         quote_id = data.get('quote_id')
-        
         if not quote_id:
             return jsonify({'error': 'Quote ID is required'}), 400
         
-        # Get service request
         service_request = ServiceRequest.objects(id=ObjectId(request_id)).first()
         if not service_request:
             return jsonify({'error': 'Service request not found'}), 404
         
-        # Check if user owns this request
         if str(service_request.user.id) != user_id:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Get the quote
         quote = ProviderQuote.objects(id=ObjectId(quote_id), service_request=service_request).first()
         if not quote:
             return jsonify({'error': 'Quote not found'}), 404
-        
-        # Check if quote is still valid
         if quote.status != 'submitted':
             return jsonify({'error': 'Quote is no longer available'}), 400
         
-        # Create booking
-        from models import Booking, Service
+        provider = quote.provider
+        if not provider:
+            return jsonify({'error': 'Provider not found'}), 404
+        if provider.verification_status != 'verified':
+            return jsonify({
+                'error': 'Provider not verified',
+                'details': 'This provider is not verified yet. Please select a verified provider.'
+            }), 403
         
-        # Get or create a service for this category
+        active_booking = Booking.objects(provider=provider, status__in=['Accepted', 'In Progress']).first()
+        if active_booking:
+            return jsonify({
+                'error': 'Provider is busy',
+                'details': 'This provider is currently working on another job. Please select a different provider or wait for them to complete their current job.'
+            }), 400
+        
+        from models import Service
         service = Service.objects(category=service_request.service_category).first()
         if not service:
             service = Service(
@@ -354,10 +412,9 @@ def select_quote(request_id):
             )
             service.save()
         
-        # Create booking
         booking = Booking(
             user=user,
-            provider=quote.provider,
+            provider=provider,
             service=service,
             status='Accepted',
             scheduled_time=service_request.preferred_date,
@@ -366,64 +423,33 @@ def select_quote(request_id):
             location_lon=service_request.location_lon,
             notes=service_request.description,
             service_name=service.name,
-            provider_id=str(quote.provider.user.id),  # Store USER ID, not provider profile ID
-            provider_name=quote.provider_name,
+            provider_id=str(provider.user.id),
+            provider_name=quote.provider_name or provider.user.name,
             has_payment=False,
             payment_status='Pending'
         )
         booking.save()
         
-        # Update service request
         service_request.status = 'quote_selected'
         service_request.selected_quote = quote
         service_request.final_booking = booking
         service_request.save()
         
-        # Update quote status
         quote.status = 'selected'
         quote.save()
         
-        # Get ALL providers who were notified about this request (not just those who quoted)
-        all_notifications = ProviderNotification.objects(
-            service_request=service_request,
-            notification_type='new_request'
-        )
-        
-        # Collect all provider IDs who were notified
-        notified_provider_ids = [notif.provider.id for notif in all_notifications]
-        
-        # Reject other quotes and clean up notifications for NON-selected providers
-        other_quotes = ProviderQuote.objects(service_request=service_request, status='submitted')
+        other_quotes = ProviderQuote.objects(service_request=service_request, id__ne=quote.id)
+        other_provider_ids = []
         for other_quote in other_quotes:
             other_quote.status = 'rejected'
             other_quote.save()
-            
-        # Delete ALL notifications for this request from ALL providers (except selected one)
-            ProviderNotification.objects(
-            service_request=service_request,
-            provider__ne=quote.provider  # Exclude the selected provider
-        ).delete()
-        
-        print(f"Deleted notifications for {len(notified_provider_ids)} providers (except selected provider)")
-        
-        # Emit real-time update to ALL notified providers to remove this request from their view
-        for provider_id in notified_provider_ids:
-            if str(provider_id) != str(quote.provider.id):
-                socketio.emit('request_assigned_to_other', {
-                    'request_id': str(service_request.id),
-                    'message': 'This service request has been assigned to another provider'
-                }, room=f'provider_{provider_id}')
-                print(f"Notified provider {provider_id} to remove request")
-        
-        # Clean up notifications for the selected provider and create success notification
-        ProviderNotification.objects(
-            provider=quote.provider,
-                service_request=service_request
-            ).delete()
-            
-        # Notify selected provider with success message
+            if other_quote.provider:
+                other_provider_ids.append(other_quote.provider.id)
+
+        ProviderNotification.objects(service_request=service_request, provider__ne=provider).delete()
+
         notification = ProviderNotification(
-            provider=quote.provider,
+            provider=provider,
             service_request=service_request,
             notification_type='quote_selected',
             title='🎉 Your Quote Was Selected!',
@@ -433,14 +459,33 @@ def select_quote(request_id):
         )
         notification.save()
         
-        # Emit real-time notification to selected provider
         socketio.emit('quote_selected', {
             'request_id': str(service_request.id),
             'booking_id': str(booking.id),
-            'provider_id': str(quote.provider.id),
+            'provider_id': str(provider.id),
             'message': 'Your quote has been selected!',
             'title': service_request.title
-        }, room=f'provider_{quote.provider.id}')
+        }, room=f'provider_{provider.id}')
+
+        for other_provider_id in other_provider_ids:
+            socketio.emit('request_assigned_to_other', {
+                'request_id': str(service_request.id),
+                'message': 'This service request has been assigned to another provider'
+            }, room=f'provider_{other_provider_id}')
+
+        socketio.emit('request_cancelled', {
+            'request_id': str(service_request.id),
+            'title': service_request.title,
+            'reason': 'Assigned to selected provider'
+        }, room='all_providers')
+
+        socketio.emit('quote_selected', {
+            'request_id': str(service_request.id),
+            'booking_id': str(booking.id),
+            'provider_id': str(provider.id),
+            'message': 'Quote selected',
+            'title': service_request.title
+        }, room=f'user_{user.id}')
         
         return jsonify({
             'success': True,
@@ -450,7 +495,9 @@ def select_quote(request_id):
         
     except Exception as e:
         print(f"Error selecting quote: {e}")
-        return jsonify({'error': 'Failed to select quote'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to select quote', 'details': str(e)}), 500
 
 @service_request_bp.get('/api/provider/notifications')
 @jwt_required()
@@ -508,7 +555,7 @@ def get_provider_notifications():
                 'title': notif.title,
                 'message': notif.message,
                 'is_read': notif.is_read,
-                    'created_at': notif.created_at.isoformat() if notif.created_at else None,
+                    'created_at': to_iso(notif.created_at),
                     'service_request_id': str(notif.service_request.id) if notif.service_request else None
                 })
             except Exception as e:
@@ -599,10 +646,11 @@ def get_provider_service_requests():
                 'location': req.location_address,
                 'distance': round(distance, 2),
                 'images': req.images or [],
-                'preferred_date': req.preferred_date.isoformat() if req.preferred_date else None,
+                'voice_description_url': req.voice_description_url or None,
+                'preferred_date': to_iso(req.preferred_date),
                 'preferred_time_slot': req.preferred_time_slot or '',
-                'created_at': req.created_at.isoformat() if req.created_at else None,
-                'quote_deadline': req.quote_deadline.isoformat() if req.quote_deadline else None,
+                'created_at': to_iso(req.created_at),
+                'quote_deadline': to_iso(req.quote_deadline),
                 'has_quoted': existing_quote is not None,
                 'quote_status': existing_quote.status if existing_quote else None
             })
@@ -650,6 +698,13 @@ def submit_quote(request_id):
         if not provider:
             return jsonify({'error': 'Provider profile not found', 'details': 'No provider profile found'}), 404
         
+        # Check if provider is verified
+        if provider.verification_status != 'verified':
+            return jsonify({
+                'error': 'Verification required',
+                'details': 'Please complete your verification to submit quotes. Go to Provider Dashboard to start verification.'
+            }), 403
+        
         # Get request data
         data = request.get_json()
         if not data:
@@ -691,6 +746,14 @@ def submit_quote(request_id):
         existing_quote = ProviderQuote.objects(service_request=service_request, provider=provider).first()
         if existing_quote:
             return jsonify({'error': 'Quote already submitted', 'details': 'You have already submitted a quote for this request'}), 400
+        
+        # Check if provider has an active job in progress
+        active_booking = Booking.objects(provider=provider, status='In Progress').first()
+        if active_booking:
+            return jsonify({
+                'error': 'Cannot accept new job',
+                'details': f'You have an active job in progress. Please complete your current job (Booking ID: {str(active_booking.id)[:8]}...) before accepting new requests.'
+            }), 400
         
         # Check if quote deadline has passed
         if service_request.quote_deadline and datetime.utcnow() > service_request.quote_deadline:
@@ -794,9 +857,13 @@ def cancel_service_request(request_id):
         
         # Get all quotes for this request to notify providers
         quotes = ProviderQuote.objects(service_request=service_request)
+        quote_provider_ids = set()
         
-        # Notify all providers who quoted
+        # Mark existing quotes as cancelled and notify providers
         for quote in quotes:
+            quote.status = 'cancelled'
+            quote.save()
+            quote_provider_ids.add(quote.provider.id)
             notification = ProviderNotification(
                 provider=quote.provider,
                 service_request=service_request,
@@ -806,25 +873,13 @@ def cancel_service_request(request_id):
                 is_sent=True
             )
             notification.save()
-            
-            # Emit real-time notification
             socketio.emit('request_cancelled', {
                 'request_id': str(service_request.id),
                 'title': service_request.title,
                 'reason': 'Cancelled by customer'
             }, room=f'provider_{quote.provider.id}')
         
-        # Also notify all providers who were originally notified but didn't quote
-        # Get all providers who were notified about this request
-        all_notified_providers = set()
-        
-        # Add providers who quoted
-        for quote in quotes:
-            all_notified_providers.add(quote.provider.id)
-        
-        # Find all providers who were originally notified (from the notification system)
-        # This would be the providers who received the initial notification
-        # We need to emit cancellation to all of them
+        # Notify all providers who were originally alerted (including those without quotes)
         socketio.emit('request_cancelled', {
             'request_id': str(service_request.id),
             'title': service_request.title,
@@ -940,9 +995,9 @@ def get_user_service_requests_dashboard():
                 'urgency': req.urgency,
                 'status': req.status,
                 'location': req.location_address,
-                'created_at': req.created_at.isoformat(),
-                'quote_deadline': req.quote_deadline.isoformat() if req.quote_deadline else None,
-                'expires_at': req.expires_at.isoformat() if req.expires_at else None,
+                'created_at': to_iso(req.created_at),
+                'quote_deadline': to_iso(req.quote_deadline),
+                'expires_at': to_iso(req.expires_at),
                 'has_quotes': ProviderQuote.objects(service_request=req).count() > 0,
                 'quote_count': ProviderQuote.objects(service_request=req).count()
             } for req in service_requests]
@@ -1092,7 +1147,7 @@ def create_test_service_requests():
                     preferred_date=req_data['preferred_date'],
                     preferred_time_slot=req_data['preferred_time_slot'],
                     status='open',
-                    quote_deadline=datetime.utcnow() + timedelta(hours=24),
+                    quote_deadline=datetime.utcnow() + timedelta(minutes=10),
                     expires_at=datetime.utcnow() + timedelta(days=7)
                 )
                 service_request.save()
