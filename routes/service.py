@@ -58,6 +58,38 @@ def list_services():
         return jsonify([])
 
 
+@service_bp.get('/public/stats')
+def public_stats():
+    """Public endpoint with live counters for homepage.
+    Use raw collection access to avoid triggering index builds (which
+    can fail on legacy data, e.g., duplicate nulls in unique indexes).
+    """
+    try:
+        users_coll = User._get_collection()
+        services_coll = Service._get_collection()
+        try:
+            from models import Provider  # local import to avoid circulars
+            providers_coll = Provider._get_collection()
+        except Exception:
+            providers_coll = None
+
+        customers = users_coll.estimated_document_count() if users_coll is not None else 0
+        providers = (providers_coll.estimated_document_count() if providers_coll is not None else 0)
+        categories = (
+            len(list(filter(lambda v: v is not None, services_coll.distinct('category'))))
+            if services_coll is not None else 0
+        )
+
+        return jsonify({
+            'customers': int(customers),
+            'providers': int(providers),
+            'categories': int(categories)
+        })
+    except Exception as e:
+        print(f"Error in public_stats: {str(e)}")
+        return jsonify({'customers': 0, 'providers': 0, 'categories': 0})
+
+
 @service_bp.post('/services')
 @jwt_required()
 def create_service():
@@ -124,7 +156,19 @@ def service_view(service_id):
         if not service:
             return render_template('404.html'), 404
         
-        return render_template('service_detail.html', service=service)
+        # Service icons mapping
+        service_icons = {
+            'Electrician': 'fas fa-bolt',
+            'Plumber': 'fas fa-wrench',
+            'Carpenter': 'fas fa-hammer',
+            'Cleaner': 'fas fa-broom',
+            'Painter': 'fas fa-paint-brush',
+            'AC Repair': 'fas fa-snowflake'
+        }
+        
+        service_icon = service_icons.get(service.name, 'fas fa-tools')
+        
+        return render_template('service_detail.html', service=service, service_icon=service_icon)
     except Exception as e:
         print(f"Error in service_view: {str(e)}")
         return render_template('404.html'), 404
