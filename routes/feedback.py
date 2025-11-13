@@ -57,11 +57,20 @@ def submit_feedback():
 def get_featured_feedback():
     """Get featured feedback for homepage display"""
     try:
-        # Get approved and featured feedback, ordered by rating and date
-        feedback_list = Feedback.objects(
+        # Get approved feedback (featured first, then others), ordered by rating and date
+        featured_feedback = Feedback.objects(
             is_approved=True,
             is_featured=True
-        ).order_by('-rating', '-created_at').limit(6)
+        ).order_by('-rating', '-created_at')
+        
+        other_approved = Feedback.objects(
+            is_approved=True,
+            is_featured=False
+        ).order_by('-rating', '-created_at')
+        
+        # Combine featured first, then other approved
+        feedback_list = list(featured_feedback) + list(other_approved)
+        feedback_list = feedback_list[:6]  # Limit to 6 reviews
         
         feedback_data = []
         for feedback in feedback_list:
@@ -148,6 +157,8 @@ def get_feedback_stats():
     except Exception as e:
         print(f"Error fetching feedback stats: {str(e)}")
         return jsonify({'error': 'Failed to fetch feedback statistics'}), 500
+
+
 
 
 
