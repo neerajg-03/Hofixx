@@ -1,7 +1,7 @@
 import os
 import sys
 from datetime import timedelta
-from flask import Flask, render_template, redirect, url_for, jsonify
+from flask import Flask, render_template, redirect, url_for, jsonify, request
 from flask_cors import CORS
 from flask_socketio import join_room
 from extensions import jwt, bcrypt, socketio, init_mongodb
@@ -67,27 +67,93 @@ def create_app():
     from routes.booking import booking_bp
     from routes.provider import provider_bp
     from routes.service import service_bp
+    from routes.feedback import feedback_bp
     from routes.completion import completion_bp
     from routes.dashboard import dashboard_bp
     from routes.payment import payment_bp
+    from routes.firebase_auth import firebase_auth_bp
+    from routes.admin import admin_bp
     from routes.service_request import service_request_bp
+    from routes.shop import shop_bp
+    from routes.wallet import wallet_bp
+    from routes.verification import verification_bp
 
     app.register_blueprint(auth_bp, url_prefix='/')
     app.register_blueprint(booking_bp, url_prefix='/')
     app.register_blueprint(provider_bp, url_prefix='/')
     app.register_blueprint(service_bp, url_prefix='/')
+    app.register_blueprint(feedback_bp, url_prefix='/')
     app.register_blueprint(completion_bp, url_prefix='/')
     app.register_blueprint(dashboard_bp, url_prefix='/')
     app.register_blueprint(payment_bp, url_prefix='/')
     app.register_blueprint(service_request_bp, url_prefix='/')
+    app.register_blueprint(firebase_auth_bp, url_prefix='/')
+    app.register_blueprint(admin_bp, url_prefix='/')
+    app.register_blueprint(shop_bp, url_prefix='/')
+    app.register_blueprint(wallet_bp, url_prefix='/')
+    app.register_blueprint(verification_bp, url_prefix='/')
 
     @app.route('/')
     def home():
         return render_template('home.html')
+    
+    @app.route('/about')
+    def about():
+        return render_template('about.html')
+    
+    @app.route('/support')
+    def support():
+        return render_template('support.html')
+    
+    @app.route('/orders')
+    def orders():
+        return render_template('orders.html')
 
-    @app.route('/services')
-    def services_page():
-        return render_template('services.html')
+    # Public shops listing for homepage ads
+    @app.route('/public/shops')
+    def public_shops():
+        try:
+            from models import ShopAd
+            limit = int(request.args.get('limit', 8))
+            shops = ShopAd.objects(is_active=True).order_by('-priority', '-created_at').limit(limit)
+            result = []
+            for s in shops:
+                image_url = None
+                if s.image_path:
+                    image_url = request.url_root.rstrip('/') + '/' + os.path.join('static', s.image_path).replace('\\','/')
+                result.append({
+                    'id': str(s.id),
+                    'name': s.name,
+                    'category': s.category,
+                    'address': s.address,
+                    'contact_phone': s.contact_phone,
+                    'contact_email': s.contact_email,
+                    'website': s.website,
+                    'image_url': image_url
+                })
+            return jsonify(result)
+        except Exception as e:
+            return jsonify([])
+
+    @app.route('/shop')
+    def shop_page():
+        return render_template('shop.html')
+    
+    @app.route('/shop/category/<category>')
+    def shop_category_page(category):
+        return render_template('shop_category.html', category=category)
+    
+    @app.route('/shop/dashboard')
+    def shop_dashboard_page():
+        return render_template('shop_dashboard.html')
+    
+    @app.route('/verification/provider')
+    def provider_verification_page():
+        return render_template('provider_verification.html')
+    
+    @app.route('/verification/shopkeeper')
+    def shopkeeper_verification_page():
+        return render_template('shopkeeper_verification.html')
 
     @app.route('/booking-map')
     def booking_map_page():
@@ -272,7 +338,7 @@ def create_app():
         except Exception as e:
             print(f'Error in typing_stop event: {e}')
 
-    # Seed minimal services if empty
+    # Seed minimal services and demo shops if empty
     with app.app_context():
         try:
             if Service.objects.count() == 0:
@@ -284,6 +350,15 @@ def create_app():
                 ]
                 for service in services:
                     service.save()
+            # Seed demo shops for homepage if none exist
+            from models import ShopAd
+            if ShopAd.objects.count() == 0:
+                demo_shops = [
+                    ShopAd(name='Sharma Hardware', category='hardware', address='MG Road, Gurgaon', contact_phone='+91 98765 43210', priority=5, is_active=True),
+                    ShopAd(name='Bright Electricals', category='electricals', address='Sector 14, Gurgaon', contact_phone='+91 99887 66554', priority=4, is_active=True)
+                ]
+                for s in demo_shops:
+                    s.save()
         except Exception as e:
             print(f"Error seeding services: {e}")
 
