@@ -61,6 +61,10 @@ def upload_service_completion():
         if not booking_id:
             return jsonify({'message': 'Booking ID is required'}), 400
         
+        # Validate required fields
+        if not completion_notes or completion_notes.strip() == '':
+            return jsonify({'message': 'Completion notes are required'}), 400
+        
         try:
             booking = Booking.objects(id=ObjectId(booking_id)).first()
             print(f"Booking found: {booking.id if booking else 'None'}")  # Debug logging
@@ -79,12 +83,12 @@ def upload_service_completion():
         if booking.status != 'In Progress':
             return jsonify({'message': 'Booking must be in progress to upload completion'}), 400
         
-        # Handle file uploads
+        # Handle file uploads - REQUIRED
         uploaded_images = []
         if 'images' in request.files:
             files = request.files.getlist('images')
             for file in files:
-                if file and allowed_file(file.filename):
+                if file and file.filename and allowed_file(file.filename):
                     # Generate unique filename
                     filename = secure_filename(file.filename)
                     unique_filename = f"{uuid.uuid4()}_{filename}"
@@ -100,6 +104,10 @@ def upload_service_completion():
                     # Store relative URL
                     relative_path = f"uploads/completions/{unique_filename}"
                     uploaded_images.append(relative_path)
+        
+        # Validate that at least one image was uploaded
+        if not uploaded_images or len(uploaded_images) == 0:
+            return jsonify({'message': 'At least one completion image is required'}), 400
         
         # Create service completion record
         completion = ServiceCompletion(
