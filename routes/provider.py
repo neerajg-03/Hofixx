@@ -10,6 +10,68 @@ import json
 
 provider_bp = Blueprint('provider', __name__)
 
+@provider_bp.post('/api/provider/availability')
+@jwt_required()
+def set_my_availability():
+    """Set current provider availability persistently"""
+    try:
+        ident = get_jwt_identity()
+        user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+        user = User.objects(id=ObjectId(user_id)).first()
+        if not user or not user.provider_profile:
+            return jsonify({'error': 'Provider profile not found'}), 404
+        data = request.get_json() or {}
+        if 'availability' not in data:
+            return jsonify({'error': 'availability required'}), 400
+        provider = user.provider_profile
+        provider.availability = bool(data.get('availability'))
+        provider.save()
+        return jsonify({'message': 'Availability updated', 'availability': provider.availability})
+    except Exception as e:
+        return jsonify({'error': 'Failed to update availability'}), 500
+
+
+@provider_bp.post('/api/provider/daily-rates')
+@jwt_required()
+def update_daily_rates():
+    """Update provider's daily rates for services"""
+    try:
+        ident = get_jwt_identity()
+        user_id = str(ident) if isinstance(ident, str) else str(ident.get('id') or ident)
+        user = User.objects(id=ObjectId(user_id)).first()
+        if not user or not user.provider_profile:
+            return jsonify({'error': 'Provider profile not found'}), 404
+        
+        data = request.get_json() or {}
+        daily_rates = data.get('daily_rates', {})
+        
+        # Validate daily_rates is a dictionary
+        if not isinstance(daily_rates, dict):
+            return jsonify({'error': 'daily_rates must be a dictionary'}), 400
+        
+        # Validate all values are positive numbers
+        for service_name, rate in daily_rates.items():
+            try:
+                rate_float = float(rate)
+                if rate_float < 0:
+                    return jsonify({'error': f'Daily rate for {service_name} must be positive'}), 400
+                daily_rates[service_name] = rate_float
+            except (ValueError, TypeError):
+                return jsonify({'error': f'Invalid daily rate for {service_name}'}), 400
+        
+        provider = user.provider_profile
+        if not provider.daily_rates:
+            provider.daily_rates = {}
+        provider.daily_rates.update(daily_rates)
+        provider.save()
+        
+        return jsonify({
+            'message': 'Daily rates updated successfully',
+            'daily_rates': provider.daily_rates
+        })
+    except Exception as e:
+        return jsonify({'error': 'Failed to update daily rates', 'details': str(e)}), 500
+
 def calculate_distance_haversine(lat1, lon1, lat2, lon2):
     """Calculate distance between two coordinates using Haversine formula"""
     R = 6371  # Earth's radius in kilometers
@@ -143,7 +205,8 @@ def providers_nearby():
             'jobs_count': jobs_count,
             'distance_km': round(dist, 2),
             'avatar': u.avatar_path,
-            'availability': provider.availability
+            'availability': provider.availability,
+            'daily_rates': provider.daily_rates or {}
         })
     
     # Sort by distance first, then by rating
