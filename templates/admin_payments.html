@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Manage Payments{% endblock %}
+
+{% block content %}
+{% include "admin_auth_check.html" %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link admin-nav-link" href="/admin" data-href="/admin">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/feedback">
+                            <i class="fas fa-comments me-2"></i>Feedback Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/shops">
+                            <i class="fas fa-store me-2"></i>Shops
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/services">
+                            <i class="fas fa-tools me-2"></i>Services
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/bookings">
+                            <i class="fas fa-calendar-check me-2"></i>Bookings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/providers">
+                            <i class="fas fa-users me-2"></i>Providers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">
+                            <i class="fas fa-user-cog me-2"></i>User Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/payments">
+                            <i class="fas fa-credit-card me-2"></i>Payments
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2"><i class="fas fa-credit-card me-2"></i>Payments Management</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Payments</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Revenue</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">₹{{ "%.2f"|format(stats.total_revenue) }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-rupee-sign fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Successful</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.success }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.pending }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-clock fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Stats Row -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-danger shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Failed</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.failed }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-secondary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Refunded</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.refunded }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-undo fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-6 col-md-12 mb-4">
+                    <div class="card shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-2">Payment Methods</div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted">Cash: <strong>{{ stats.method_counts.Cash }}</strong></small><br>
+                                    <small class="text-muted">Card: <strong>{{ stats.method_counts.Card }}</strong></small><br>
+                                    <small class="text-muted">UPI: <strong>{{ stats.method_counts.UPI }}</strong></small>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Bank Transfer: <strong>{{ stats.method_counts['Bank Transfer'] }}</strong></small><br>
+                                    <small class="text-muted">Razorpay: <strong>{{ stats.method_counts.Razorpay }}</strong></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Filter by Status</label>
+                            <select name="status" class="form-select" onchange="this.form.submit()">
+                                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+                                <option value="Success" {% if status_filter == 'Success' %}selected{% endif %}>Success</option>
+                                <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                                <option value="Failed" {% if status_filter == 'Failed' %}selected{% endif %}>Failed</option>
+                                <option value="Refunded" {% if status_filter == 'Refunded' %}selected{% endif %}>Refunded</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Filter by Method</label>
+                            <select name="method" class="form-select" onchange="this.form.submit()">
+                                <option value="all" {% if method_filter == 'all' %}selected{% endif %}>All Methods</option>
+                                <option value="Cash" {% if method_filter == 'Cash' %}selected{% endif %}>Cash</option>
+                                <option value="Card" {% if method_filter == 'Card' %}selected{% endif %}>Card</option>
+                                <option value="UPI" {% if method_filter == 'UPI' %}selected{% endif %}>UPI</option>
+                                <option value="Bank Transfer" {% if method_filter == 'Bank Transfer' %}selected{% endif %}>Bank Transfer</option>
+                                <option value="Razorpay" {% if method_filter == 'Razorpay' %}selected{% endif %}>Razorpay</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Filter by Customer</label>
+                            <select name="user" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Customers</option>
+                                {% for u in all_users %}
+                                <option value="{{ u.id }}" {% if user_filter == u.id|string %}selected{% endif %}>{{ u.name }} ({{ u.email }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="button" class="btn btn-secondary form-control" onclick="window.location.href='/admin/payments'">Clear Filters</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Payments Table -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">All Payments</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Payment ID</th>
+                                    <th>Customer</th>
+                                    <th>Provider</th>
+                                    <th>Service</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in payments.items %}
+                                <tr>
+                                    <td><small>{{ (payment.id|string)[:8] }}</small></td>
+                                    <td>
+                                        {{ payment.user.name if payment.user else 'N/A' }}
+                                        <br><small class="text-muted">{{ payment.user.email if payment.user else '' }}</small>
+                                    </td>
+                                    <td>
+                                        {% if payment.booking and payment.booking.provider %}
+                                            {{ payment.booking.provider_name or (payment.booking.provider.user.name if payment.booking.provider.user else 'N/A') }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ payment.booking.service_name if payment.booking else 'N/A' }}</td>
+                                    <td><strong>₹{{ "%.2f"|format(payment.amount) }}</strong></td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ payment.method }}</span>
+                                    </td>
+                                    <td>
+                                        {% if payment.status == 'Success' %}
+                                            <span class="badge bg-success">{{ payment.status }}</span>
+                                        {% elif payment.status == 'Pending' %}
+                                            <span class="badge bg-warning">{{ payment.status }}</span>
+                                        {% elif payment.status == 'Failed' %}
+                                            <span class="badge bg-danger">{{ payment.status }}</span>
+                                        {% elif payment.status == 'Refunded' %}
+                                            <span class="badge bg-info">{{ payment.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ payment.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ payment.created_at.strftime('%Y-%m-%d %H:%M') if payment.created_at else 'N/A' }}</small></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info view-payment-btn" data-payment-id="{{ payment.id|string }}" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">No payments found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if payments.pages > 1 %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if payments.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ payments.prev_num }}&status={{ status_filter }}&method={{ method_filter }}&user={{ user_filter }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            {% for page_num in payments.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                {% if page_num %}
+                                    {% if page_num == payments.page %}
+                                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                    {% else %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ page_num }}&status={{ status_filter }}&method={{ method_filter }}&user={{ user_filter }}">{{ page_num }}</a></li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if payments.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ payments.next_num }}&status={{ status_filter }}&method={{ method_filter }}&user={{ user_filter }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Payment Details Modal -->
+<div class="modal fade" id="paymentDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Payment Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="paymentDetailsContent">
+                <div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('token');
+    
+    // View payment details
+    document.querySelectorAll('.view-payment-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const paymentId = this.getAttribute('data-payment-id');
+            const modal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
+            const content = document.getElementById('paymentDetailsContent');
+            
+            content.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            modal.show();
+            
+            try {
+                const url = `/api/admin/payments/${paymentId}`;
+                const urlWithToken = url.includes('?') ? `${url}&token=${token}` : `${url}?token=${token}`;
+                const response = await fetch(urlWithToken, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const payment = await response.json();
+                
+                if (response.ok) {
+                    content.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-user me-2"></i>Customer Information</h6>
+                                <p><strong>Name:</strong> ${payment.customer.name}</p>
+                                <p><strong>Email:</strong> ${payment.customer.email}</p>
+                                <p><strong>Phone:</strong> ${payment.customer.phone || 'N/A'}</p>
+                                <p><strong>Customer ID:</strong> <small class="text-muted">${payment.customer.id}</small></p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-credit-card me-2"></i>Payment Information</h6>
+                                <p><strong>Amount:</strong> ₹${payment.amount.toFixed(2)} ${payment.currency}</p>
+                                <p><strong>Method:</strong> <span class="badge bg-secondary">${payment.method}</span></p>
+                                <p><strong>Status:</strong> <span class="badge bg-${payment.status === 'Success' ? 'success' : payment.status === 'Pending' ? 'warning' : payment.status === 'Failed' ? 'danger' : 'info'}">${payment.status}</span></p>
+                                <p><strong>Date:</strong> ${new Date(payment.created_at).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-calendar-check me-2"></i>Booking Information</h6>
+                                <p><strong>Service:</strong> ${payment.booking.service_name}</p>
+                                <p><strong>Status:</strong> <span class="badge bg-primary">${payment.booking.status}</span></p>
+                                <p><strong>Booking ID:</strong> <small class="text-muted">${payment.booking.id}</small></p>
+                                ${payment.booking.scheduled_time ? `<p><strong>Scheduled:</strong> ${new Date(payment.booking.scheduled_time).toLocaleString()}</p>` : ''}
+                            </div>
+                            <div class="col-md-6">
+                                ${payment.provider ? `
+                                <h6><i class="fas fa-users me-2"></i>Provider Information</h6>
+                                <p><strong>Name:</strong> ${payment.provider.name}</p>
+                                <p><strong>Email:</strong> ${payment.provider.user_email}</p>
+                                <p><strong>Phone:</strong> ${payment.provider.user_phone}</p>
+                                <p><strong>Provider ID:</strong> <small class="text-muted">${payment.provider.id}</small></p>
+                                ` : '<p class="text-muted">No provider assigned</p>'}
+                            </div>
+                        </div>
+                        ${payment.razorpay_payment_id || payment.razorpay_order_id ? `
+                        <hr>
+                        <div class="row">
+                            <div class="col-12">
+                                <h6><i class="fas fa-key me-2"></i>Razorpay Details</h6>
+                                ${payment.razorpay_payment_id ? `<p><strong>Payment ID:</strong> <small class="text-muted">${payment.razorpay_payment_id}</small></p>` : ''}
+                                ${payment.razorpay_order_id ? `<p><strong>Order ID:</strong> <small class="text-muted">${payment.razorpay_order_id}</small></p>` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                    `;
+                } else {
+                    content.innerHTML = `<div class="alert alert-danger">${payment.error || 'Failed to load payment details'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                content.innerHTML = `<div class="alert alert-danger">Error loading payment details</div>`;
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 48px 0 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+}
+.border-left-primary { border-left: 0.25rem solid #4e73df !important; }
+.border-left-success { border-left: 0.25rem solid #1cc88a !important; }
+.border-left-info { border-left: 0.25rem solid #36b9cc !important; }
+.border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
+.border-left-danger { border-left: 0.25rem solid #e74a3b !important; }
+.border-left-secondary { border-left: 0.25rem solid #858796 !important; }
+.text-xs { font-size: 0.7rem; }
+.text-gray-300 { color: #dddfeb !important; }
+.text-gray-800 { color: #5a5c69 !important; }
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

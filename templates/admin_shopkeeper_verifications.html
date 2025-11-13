@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% block title %}Admin - Shopkeeper Verifications{% endblock %}
+{% block content %}
+{% include "admin_auth_check.html" %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0"><i class="fas fa-store me-2"></i>Shopkeeper Verifications</h2>
+    <button class="btn btn-outline-primary btn-sm" onclick="loadVerifications()">
+      <i class="fas fa-sync me-1"></i>Refresh
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <button class="nav-link active" onclick="showTab('pending')">Pending <span class="badge bg-warning ms-2" id="pendingCount">0</span></button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="showTab('verified')">Verified <span class="badge bg-success ms-2" id="verifiedCount">0</span></button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="showTab('rejected')">Rejected <span class="badge bg-danger ms-2" id="rejectedCount">0</span></button>
+    </li>
+  </ul>
+
+  <!-- Pending Verifications -->
+  <div id="pendingTab" class="tab-content">
+    <div id="pendingList" class="row g-3">
+      <!-- Will be populated by JavaScript -->
+    </div>
+    <div id="pendingEmpty" class="text-center py-5 d-none">
+      <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+      <h5 class="text-muted">No pending verifications</h5>
+    </div>
+  </div>
+
+  <!-- Verified Verifications -->
+  <div id="verifiedTab" class="tab-content d-none">
+    <div id="verifiedList" class="row g-3">
+      <!-- Will be populated by JavaScript -->
+    </div>
+  </div>
+
+  <!-- Rejected Verifications -->
+  <div id="rejectedTab" class="tab-content d-none">
+    <div id="rejectedList" class="row g-3">
+      <!-- Will be populated by JavaScript -->
+    </div>
+  </div>
+</div>
+
+<!-- View Details Modal -->
+<div class="modal fade" id="viewDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Verification Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="detailsContent">
+        <!-- Details will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="approveBtn" onclick="approveVerification()">
+          <i class="fas fa-check me-2"></i>Approve
+        </button>
+        <button type="button" class="btn btn-danger" id="rejectBtn" onclick="showRejectModal()">
+          <i class="fas fa-times me-2"></i>Reject
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Reject Verification</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Rejection Reason (Optional)</label>
+        <textarea class="form-control" id="rejectRemarks" rows="3" placeholder="Please provide reason for rejection..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" onclick="rejectVerification()">Confirm Rejection</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentVerificationId = null;
+let currentTab = 'pending';
+
+function getAuthToken() {
+  const cookieTok = document.cookie.split('; ').find(row => row.startsWith('access_token_cookie='))?.split('=')[1];
+  if (cookieTok) return cookieTok;
+  return localStorage.getItem('token');
+}
+
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('d-none'));
+  document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+  
+  if (tab === 'pending') {
+    document.getElementById('pendingTab').classList.remove('d-none');
+    document.querySelectorAll('.nav-link')[0].classList.add('active');
+  } else if (tab === 'verified') {
+    document.getElementById('verifiedTab').classList.remove('d-none');
+    document.querySelectorAll('.nav-link')[1].classList.add('active');
+  } else if (tab === 'rejected') {
+    document.getElementById('rejectedTab').classList.remove('d-none');
+    document.querySelectorAll('.nav-link')[2].classList.add('active');
+  }
+  
+  loadVerifications();
+}
+
+function loadVerifications() {
+  const token = getAuthToken();
+  fetch('/api/admin/verifications/shopkeepers', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const pending = data.verifications.filter(v => v.verification_status === 'pending');
+    const verified = data.verifications.filter(v => v.verification_status === 'verified');
+    const rejected = data.verifications.filter(v => v.verification_status === 'rejected');
+    
+    document.getElementById('pendingCount').textContent = pending.length;
+    document.getElementById('verifiedCount').textContent = verified.length;
+    document.getElementById('rejectedCount').textContent = rejected.length;
+    
+    renderVerifications(pending, 'pendingList');
+    renderVerifications(verified, 'verifiedList');
+    renderVerifications(rejected, 'rejectedList');
+    
+    if (pending.length === 0) {
+      document.getElementById('pendingEmpty').classList.remove('d-none');
+    } else {
+      document.getElementById('pendingEmpty').classList.add('d-none');
+    }
+  })
+  .catch(error => {
+    console.error('Error loading verifications:', error);
+  });
+}
+
+function renderVerifications(verifications, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  
+  verifications.forEach(verification => {
+    const card = document.createElement('div');
+    card.className = 'col-md-6 col-lg-4';
+    card.innerHTML = `
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6 class="card-title">${verification.shop_name}</h6>
+          <p class="text-muted small mb-2">
+            <i class="fas fa-user me-1"></i>${verification.owner_name}<br>
+            <i class="fas fa-envelope me-1"></i>${verification.owner_email}<br>
+            <i class="fas fa-phone me-1"></i>${verification.owner_phone}
+          </p>
+          <p class="mb-2">
+            <span class="badge ${getStatusBadgeClass(verification.verification_status)}">
+              ${verification.verification_status}
+            </span>
+          </p>
+          ${verification.submitted_at ? `
+            <p class="text-muted small mb-3">
+              Submitted: ${new Date(verification.submitted_at).toLocaleDateString()}
+            </p>
+          ` : ''}
+          <button class="btn btn-primary btn-sm w-100" onclick="viewDetails('${verification.shop_id}')">
+            <i class="fas fa-eye me-1"></i>View Details
+          </button>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function getStatusBadgeClass(status) {
+  const classes = {
+    'pending': 'bg-warning',
+    'verified': 'bg-success',
+    'rejected': 'bg-danger'
+  };
+  return classes[status] || 'bg-secondary';
+}
+
+function viewDetails(shopId) {
+  currentVerificationId = shopId;
+  const token = getAuthToken();
+  
+  fetch('/api/admin/verifications/shopkeepers', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const verification = data.verifications.find(v => v.shop_id === shopId);
+    if (!verification) return;
+    
+    const content = document.getElementById('detailsContent');
+    content.innerHTML = `
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <h6>Shop Information</h6>
+          <p><strong>Shop Name:</strong> ${verification.shop_name}</p>
+          <p><strong>Owner:</strong> ${verification.owner_name}</p>
+          <p><strong>Email:</strong> ${verification.owner_email}</p>
+          <p><strong>Phone:</strong> ${verification.owner_phone}</p>
+        </div>
+        <div class="col-md-6 mb-3">
+          <h6>Status</h6>
+          <p><span class="badge ${getStatusBadgeClass(verification.verification_status)}">${verification.verification_status}</span></p>
+          ${verification.submitted_at ? `<p><small>Submitted: ${new Date(verification.submitted_at).toLocaleString()}</small></p>` : ''}
+        </div>
+      </div>
+      
+      <hr>
+      
+      <h6>Documents</h6>
+      <div class="row g-2 mb-3">
+        ${verification.aadhaar_front_url ? `
+          <div class="col-md-6">
+            <label class="small">Aadhaar Front</label>
+            <img src="${verification.aadhaar_front_url}" class="img-fluid rounded border" style="max-height: 150px; cursor: pointer;" onclick="window.open('${verification.aadhaar_front_url}', '_blank')">
+          </div>
+        ` : ''}
+        ${verification.aadhaar_back_url ? `
+          <div class="col-md-6">
+            <label class="small">Aadhaar Back</label>
+            <img src="${verification.aadhaar_back_url}" class="img-fluid rounded border" style="max-height: 150px; cursor: pointer;" onclick="window.open('${verification.aadhaar_back_url}', '_blank')">
+          </div>
+        ` : ''}
+        ${verification.pan_url ? `
+          <div class="col-md-6">
+            <label class="small">PAN Card</label>
+            <img src="${verification.pan_url}" class="img-fluid rounded border" style="max-height: 150px; cursor: pointer;" onclick="window.open('${verification.pan_url}', '_blank')">
+          </div>
+        ` : ''}
+        ${verification.shop_license_url ? `
+          <div class="col-md-6">
+            <label class="small">Shop License/GST</label>
+            <img src="${verification.shop_license_url}" class="img-fluid rounded border" style="max-height: 150px; cursor: pointer;" onclick="window.open('${verification.shop_license_url}', '_blank')">
+          </div>
+        ` : ''}
+        ${verification.selfie_url ? `
+          <div class="col-md-6">
+            <label class="small">Selfie</label>
+            <img src="${verification.selfie_url}" class="img-fluid rounded border" style="max-height: 150px; cursor: pointer;" onclick="window.open('${verification.selfie_url}', '_blank')">
+          </div>
+        ` : ''}
+        ${verification.police_verification_url ? `
+          <div class="col-md-6">
+            <label class="small">Police Verification</label>
+            <img src="${verification.police_verification_url}" class="img-fluid rounded border" style="max-height: 150px; cursor: pointer;" onclick="window.open('${verification.police_verification_url}', '_blank')">
+          </div>
+        ` : ''}
+      </div>
+      
+      ${verification.verification_address ? `
+        <hr>
+        <h6>Address Verification</h6>
+        <p>${verification.verification_address}</p>
+        <p class="small text-muted">
+          GPS: ${verification.verification_gps_lat}, ${verification.verification_gps_lon}
+        </p>
+      ` : ''}
+      
+      ${verification.admin_remarks ? `
+        <hr>
+        <h6>Admin Remarks</h6>
+        <p class="text-danger">${verification.admin_remarks}</p>
+      ` : ''}
+    `;
+    
+    // Show/hide buttons based on status
+    if (verification.verification_status === 'pending') {
+      document.getElementById('approveBtn').classList.remove('d-none');
+      document.getElementById('rejectBtn').classList.remove('d-none');
+    } else {
+      document.getElementById('approveBtn').classList.add('d-none');
+      document.getElementById('rejectBtn').classList.add('d-none');
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('viewDetailsModal'));
+    modal.show();
+  })
+  .catch(error => {
+    console.error('Error loading details:', error);
+  });
+}
+
+function approveVerification() {
+  if (!currentVerificationId) return;
+  
+  const token = getAuthToken();
+  fetch(`/api/admin/verifications/shopkeepers/${currentVerificationId}/approve`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert('Verification approved successfully!');
+    bootstrap.Modal.getInstance(document.getElementById('viewDetailsModal')).hide();
+    loadVerifications();
+  })
+  .catch(error => {
+    console.error('Error approving:', error);
+    alert('Error approving verification');
+  });
+}
+
+function showRejectModal() {
+  const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+  modal.show();
+}
+
+function rejectVerification() {
+  if (!currentVerificationId) return;
+  
+  const remarks = document.getElementById('rejectRemarks').value;
+  const token = getAuthToken();
+  
+  fetch(`/api/admin/verifications/shopkeepers/${currentVerificationId}/reject`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ remarks })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert('Verification rejected');
+    bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+    bootstrap.Modal.getInstance(document.getElementById('viewDetailsModal')).hide();
+    loadVerifications();
+  })
+  .catch(error => {
+    console.error('Error rejecting:', error);
+    alert('Error rejecting verification');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadVerifications();
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+
+
