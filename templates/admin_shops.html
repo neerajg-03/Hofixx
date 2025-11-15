@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Manage Shops{% endblock %}
+
+{% block content %}
+{% include "admin_auth_check.html" %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="h4 mb-0"><i class="fas fa-store me-2"></i>Manage Shops</h2>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <strong>Add / Edit Shop</strong>
+        </div>
+        <div class="card-body">
+          <form id="shopForm" enctype="multipart/form-data">
+            <input type="hidden" id="shopId">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input id="name" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Category</label>
+              <select id="category" class="form-select" required>
+                <option value="hardware">Hardware</option>
+                <option value="electricals">Electricals</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="tools">Tools</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Address</label>
+              <input id="address" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Contact Phone</label>
+              <input id="contact_phone" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Contact Email</label>
+              <input id="contact_email" type="email" class="form-control">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Website</label>
+              <input id="website" class="form-control" placeholder="https://...">
+            </div>
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label">Priority</label>
+                <input id="priority" type="number" value="0" class="form-control">
+              </div>
+              <div class="col-6 d-flex align-items-end">
+                <div class="form-check mt-3">
+                  <input class="form-check-input" type="checkbox" id="is_active" checked>
+                  <label class="form-check-label" for="is_active">Active</label>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3 mt-3">
+              <label class="form-label">Image</label>
+              <input id="image" type="file" accept="image/*" class="form-control">
+            </div>
+          </form>
+        </div>
+        <div class="card-footer bg-white d-flex gap-2">
+          <button id="saveBtn" class="btn btn-primary w-100"><i class="fas fa-save me-2"></i>Save</button>
+          <button id="resetBtn" class="btn btn-outline-secondary"><i class="fas fa-rotate-left me-2"></i>Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <strong>Shops</strong>
+          <span class="text-muted small">Click edit to load in form</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Shop</th>
+                  <th>Category</th>
+                  <th>Contact</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th style="width: 120px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="shopsTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const token = localStorage.getItem('token') || '';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadShops();
+    document.getElementById('saveBtn').addEventListener('click', saveShop);
+    document.getElementById('resetBtn').addEventListener('click', resetForm);
+  });
+
+  async function loadShops(){
+    // Use public list then augment by hitting admin list (page is server-rendered too)
+    try {
+      const res = await fetch('/public/shops?limit=100');
+      const list = res.ok ? await res.json() : [];
+      renderShops(list);
+    } catch(_){}
+  }
+
+  function renderShops(list){
+    const tbody = document.getElementById('shopsTbody');
+    tbody.innerHTML = '';
+    if(!list || list.length === 0){
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No shops yet</td></tr>';
+      return;
+    }
+    list.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div class="d-flex align-items-center">
+            ${s.image_url ? `<img src="${s.image_url}" class="rounded me-2" width="40" height="40" style="object-fit:cover">` : ''}
+            <div>
+              <div class="fw-semibold">${s.name}</div>
+              <div class="small text-muted">${s.address || ''}</div>
+            </div>
+          </div>
+        </td>
+        <td class="text-capitalize">${s.category}</td>
+        <td class="small">
+          ${s.contact_phone ? `<div><i class='fas fa-phone me-1'></i>${s.contact_phone}</div>` : ''}
+          ${s.contact_email ? `<div><i class='fas fa-envelope me-1'></i>${s.contact_email}</div>` : ''}
+        </td>
+        <td><span class="badge bg-success">Active</span></td>
+        <td>—</td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" data-action="edit" data-id="${s.id}"><i class="fas fa-pen"></i></button>
+            <button class="btn btn-outline-danger" data-action="delete" data-id="${s.id}"><i class="fas fa-trash"></i></button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.addEventListener('click', onTableClick);
+  }
+
+  function onTableClick(e){
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    const id = btn.getAttribute('data-id');
+    const action = btn.getAttribute('data-action');
+    if(action === 'edit'){
+      // public list lacks full fields, but we can at least fill name/id
+      document.getElementById('shopId').value = id;
+      // Admin can overwrite with new details and save -> update API will use id
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+    if(action === 'delete'){
+      deleteShop(id);
+    }
+  }
+
+  async function saveShop(){
+    const id = document.getElementById('shopId').value;
+    const fd = new FormData();
+    fd.append('name', document.getElementById('name').value);
+    fd.append('category', document.getElementById('category').value);
+    fd.append('address', document.getElementById('address').value);
+    fd.append('contact_phone', document.getElementById('contact_phone').value);
+    fd.append('contact_email', document.getElementById('contact_email').value);
+    fd.append('website', document.getElementById('website').value);
+    fd.append('priority', document.getElementById('priority').value || '0');
+    fd.append('is_active', document.getElementById('is_active').checked ? 'true' : 'false');
+    if(document.getElementById('image').files[0]){
+      fd.append('image', document.getElementById('image').files[0]);
+    }
+
+    const url = id ? `/api/admin/shops/${id}` : '/api/admin/shops';
+    const res = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd });
+    if(res.ok){
+      show('Saved');
+      resetForm();
+      await loadShops();
+    } else {
+      show('Failed to save', true);
+    }
+  }
+
+  async function deleteShop(id){
+    if(!confirm('Delete this shop?')) return;
+    const res = await fetch(`/api/admin/shops/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    if(res.ok){
+      show('Deleted');
+      await loadShops();
+    } else {
+      show('Failed to delete', true);
+    }
+  }
+
+  function resetForm(){
+    document.getElementById('shopForm').reset();
+    document.getElementById('shopId').value = '';
+  }
+
+  function show(msg, error=false){
+    const n = document.createElement('div');
+    n.className = `alert alert-${error? 'danger':'success'} position-fixed`;
+    n.style.cssText = 'top:20px;right:20px;z-index:9999;';
+    n.textContent = msg;
+    document.body.appendChild(n);
+    setTimeout(()=>{n.remove();}, 2000);
+  }
+})();
+</script>
+
+{% endblock %}
+
+
+

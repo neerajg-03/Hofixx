@@ -1,0 +1,532 @@
+{% extends "base.html" %}
+
+{% block title %}Policies - Hofix{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="py-5 bg-gradient-primary text-white">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto text-center">
+        <h1 class="display-4 fw-bold mb-4">Policies</h1>
+        <p class="lead">Terms of Service, Privacy Policy, and Guidelines</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Policy Content -->
+<section class="py-5 bg-white">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 mx-auto">
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs mb-4" id="policyTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="terms-tab" data-bs-toggle="tab" data-bs-target="#terms" type="button" role="tab" aria-controls="terms" aria-selected="true">
+              <i class="fas fa-file-contract me-2"></i>Terms of Service
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="privacy-tab" data-bs-toggle="tab" data-bs-target="#privacy" type="button" role="tab" aria-controls="privacy" aria-selected="false">
+              <i class="fas fa-shield-alt me-2"></i>Privacy Policy
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="guidelines-tab" data-bs-toggle="tab" data-bs-target="#guidelines" type="button" role="tab" aria-controls="guidelines" aria-selected="false">
+              <i class="fas fa-book me-2"></i>User Guidelines
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="refund-tab" data-bs-toggle="tab" data-bs-target="#refund" type="button" role="tab" aria-controls="refund" aria-selected="false">
+              <i class="fas fa-undo me-2"></i>Refund Policy
+            </button>
+          </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="policyTabContent">
+          <!-- Terms of Service -->
+          <div class="tab-pane fade show active" id="terms" role="tabpanel" aria-labelledby="terms-tab">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+              <div class="card-body p-5">
+                <h2 class="fw-bold text-primary mb-4">Terms of Service</h2>
+                <p class="text-muted mb-4">Last updated: {{ "2025-01-15" }}</p>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">1. Acceptance of Terms</h4>
+                  <p class="text-muted">By accessing and using Hofix, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">2. Description of Service</h4>
+                  <p class="text-muted mb-3">Hofix is a platform that connects users with verified service providers for home services including but not limited to:</p>
+                  <ul class="text-muted">
+                    <li>Electrical work and repairs</li>
+                    <li>Plumbing services</li>
+                    <li>Carpentry and woodwork</li>
+                    <li>Cleaning services</li>
+                    <li>Painting and decoration</li>
+                    <li>AC and HVAC services</li>
+                    <li>Online shopping from verified shops</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">3. User Responsibilities</h4>
+                  <p class="text-muted mb-3">As a user of Hofix, you agree to:</p>
+                  <ul class="text-muted">
+                    <li>Provide accurate and complete information when creating an account</li>
+                    <li>Maintain the security of your account credentials</li>
+                    <li>Use the platform only for lawful purposes</li>
+                    <li>Respect the rights of service providers and other users</li>
+                    <li>Provide honest feedback and ratings</li>
+                    <li>Pay for services as agreed upon</li>
+                    <li>Not engage in any fraudulent or deceptive practices</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">4. Service Provider Responsibilities</h4>
+                  <p class="text-muted mb-3">Service providers on Hofix must:</p>
+                  <ul class="text-muted">
+                    <li>Maintain a minimum deposit balance of ₹500 in their Hofix account</li>
+                    <li>Complete verification process before accepting bookings</li>
+                    <li>Provide accurate information about services and pricing</li>
+                    <li>Arrive on time for scheduled appointments</li>
+                    <li>Perform services with professional quality and care</li>
+                    <li>Comply with all applicable laws and regulations</li>
+                    <li>Pay Hofix commission (10%) for cash payments, deducted from deposit balance</li>
+                    <li>Maintain adequate deposit balance to continue receiving service requests</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">5. Payments and Billing</h4>
+                  <p class="text-muted mb-3">Payment terms:</p>
+                  <ul class="text-muted">
+                    <li>Users can pay through Razorpay, wallet credits, or cash on delivery</li>
+                    <li>All payments are processed securely through our payment partners</li>
+                    <li>Service providers receive payment after service completion</li>
+                    <li>Hofix charges a 10% commission on cash payments, deducted from provider's deposit</li>
+                    <li>Refunds will be processed according to our Refund Policy</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">6. Multi-Shop Orders</h4>
+                  <p class="text-muted mb-3">For online shopping:</p>
+                  <ul class="text-muted">
+                    <li>Users can order from multiple shops in a single transaction</li>
+                    <li>Shops within 1km radius share a single delivery charge (divided equally)</li>
+                    <li>Shops beyond 1km radius will have separate delivery charges</li>
+                    <li>Delivery charges are calculated based on distance from shop to delivery address</li>
+                    <li>Minimum delivery charge is ₹30 for the first kilometer</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">7. Cancellation Policy</h4>
+                  <p class="text-muted mb-3">Cancellation terms:</p>
+                  <ul class="text-muted">
+                    <li>Users may cancel bookings up to 2 hours before scheduled time</li>
+                    <li>Service providers may cancel with proper notice to users</li>
+                    <li>Cancellation fees may apply as specified at the time of booking</li>
+                    <li>Refunds will be processed according to our Refund Policy</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">8. Intellectual Property</h4>
+                  <p class="text-muted">All content, logos, and materials on Hofix are the property of Hofix or its licensors and are protected by copyright and trademark laws. Users may not use, reproduce, or distribute any content without written permission.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">9. Limitation of Liability</h4>
+                  <p class="text-muted">Hofix acts as a platform connecting users and service providers. We are not responsible for the quality of services provided by independent contractors. Users are responsible for verifying service provider credentials and reviewing service agreements.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">10. Modification of Terms</h4>
+                  <p class="text-muted">Hofix reserves the right to modify these terms at any time. Users will be notified of significant changes via email or platform notification. Continued use of the platform after changes constitutes acceptance of the modified terms.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">11. Account Termination</h4>
+                  <p class="text-muted mb-3">Hofix reserves the right to suspend or terminate accounts that:</p>
+                  <ul class="text-muted">
+                    <li>Violate these Terms of Service</li>
+                    <li>Engage in fraudulent or illegal activities</li>
+                    <li>Provide false information</li>
+                    <li>Harass or harm other users</li>
+                    <li>Fail to maintain minimum deposit balance (for providers)</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">12. Contact Information</h4>
+                  <p class="text-muted">For questions regarding these Terms of Service, please contact us at:</p>
+                  <p class="text-muted">
+                    <strong>Email:</strong> support@hofix.com<br>
+                    <strong>Phone:</strong> +91-XXX-XXXX-XXXX<br>
+                    <strong>Address:</strong> Hofix Headquarters, India
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Privacy Policy -->
+          <div class="tab-pane fade" id="privacy" role="tabpanel" aria-labelledby="privacy-tab">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+              <div class="card-body p-5">
+                <h2 class="fw-bold text-primary mb-4">Privacy Policy</h2>
+                <p class="text-muted mb-4">Last updated: {{ "2025-01-15" }}</p>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">1. Information We Collect</h4>
+                  <p class="text-muted mb-3">We collect the following types of information:</p>
+                  <ul class="text-muted">
+                    <li><strong>Personal Information:</strong> Name, email, phone number, address, and payment information</li>
+                    <li><strong>Location Data:</strong> GPS coordinates for service delivery and provider matching</li>
+                    <li><strong>Account Information:</strong> Profile details, preferences, and transaction history</li>
+                    <li><strong>Usage Data:</strong> How you interact with our platform, services used, and preferences</li>
+                    <li><strong>Device Information:</strong> IP address, browser type, and device identifiers</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">2. How We Use Your Information</h4>
+                  <p class="text-muted mb-3">We use collected information to:</p>
+                  <ul class="text-muted">
+                    <li>Provide and improve our services</li>
+                    <li>Match you with appropriate service providers</li>
+                    <li>Process payments and transactions</li>
+                    <li>Send service-related notifications and updates</li>
+                    <li>Personalize your experience</li>
+                    <li>Analyze usage patterns and improve platform functionality</li>
+                    <li>Comply with legal obligations</li>
+                    <li>Prevent fraud and ensure platform security</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">3. Information Sharing</h4>
+                  <p class="text-muted mb-3">We share your information only in the following circumstances:</p>
+                  <ul class="text-muted">
+                    <li><strong>Service Providers:</strong> Basic contact and location information with service providers to facilitate bookings</li>
+                    <li><strong>Payment Processors:</strong> Payment information with secure payment partners (Razorpay) for transaction processing</li>
+                    <li><strong>Legal Requirements:</strong> When required by law or to protect rights and safety</li>
+                    <li><strong>Business Transfers:</strong> In connection with mergers, acquisitions, or asset sales</li>
+                    <li><strong>With Consent:</strong> When you explicitly consent to sharing</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">4. Data Security</h4>
+                  <p class="text-muted">We implement industry-standard security measures to protect your personal information including encryption, secure servers, and access controls. However, no method of transmission over the internet is 100% secure.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">5. Your Rights</h4>
+                  <p class="text-muted mb-3">You have the right to:</p>
+                  <ul class="text-muted">
+                    <li>Access your personal information</li>
+                    <li>Correct inaccurate information</li>
+                    <li>Delete your account and personal data</li>
+                    <li>Object to processing of your data</li>
+                    <li>Request data portability</li>
+                    <li>Opt-out of marketing communications</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">6. Cookies and Tracking</h4>
+                  <p class="text-muted">We use cookies and similar tracking technologies to enhance your experience, analyze usage, and provide personalized content. You can control cookie preferences through your browser settings.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">7. Third-Party Services</h4>
+                  <p class="text-muted">Our platform integrates with third-party services (payment processors, maps, analytics). These services have their own privacy policies, and we encourage you to review them.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">8. Children's Privacy</h4>
+                  <p class="text-muted">Hofix is not intended for users under the age of 18. We do not knowingly collect information from children.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">9. Data Retention</h4>
+                  <p class="text-muted">We retain your personal information for as long as necessary to provide services, comply with legal obligations, resolve disputes, and enforce agreements.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">10. International Data Transfers</h4>
+                  <p class="text-muted">Your information may be transferred to and processed in countries other than your country of residence. We ensure appropriate safeguards are in place for such transfers.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">11. Changes to Privacy Policy</h4>
+                  <p class="text-muted">We may update this Privacy Policy from time to time. We will notify you of significant changes via email or platform notification.</p>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">12. Contact Us</h4>
+                  <p class="text-muted">For privacy-related questions or concerns, please contact:</p>
+                  <p class="text-muted">
+                    <strong>Privacy Officer:</strong> privacy@hofix.com<br>
+                    <strong>Data Protection:</strong> dpo@hofix.com
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Guidelines -->
+          <div class="tab-pane fade" id="guidelines" role="tabpanel" aria-labelledby="guidelines-tab">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+              <div class="card-body p-5">
+                <h2 class="fw-bold text-primary mb-4">User Guidelines</h2>
+                <p class="text-muted mb-4">Last updated: {{ "2025-01-15" }}</p>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">1. Account Guidelines</h4>
+                  <ul class="text-muted">
+                    <li>Create only one account per person</li>
+                    <li>Use accurate personal information</li>
+                    <li>Keep your account credentials secure</li>
+                    <li>Do not share your account with others</li>
+                    <li>Report any unauthorized access immediately</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">2. Booking Guidelines</h4>
+                  <ul class="text-muted">
+                    <li>Provide accurate service requirements and location</li>
+                    <li>Be available at the scheduled time</li>
+                    <li>Communicate clearly with service providers</li>
+                    <li>Cancel bookings with adequate notice (minimum 2 hours)</li>
+                    <li>Review service provider profiles before booking</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">3. Payment Guidelines</h4>
+                  <ul class="text-muted">
+                    <li>Pay for services promptly after completion</li>
+                    <li>Use secure payment methods (Razorpay, wallet)</li>
+                    <li>Keep payment receipts for your records</li>
+                    <li>Report any payment issues immediately</li>
+                    <li>Understand delivery charges for multi-shop orders</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">4. Review and Rating Guidelines</h4>
+                  <ul class="text-muted">
+                    <li>Provide honest and constructive feedback</li>
+                    <li>Rate based on actual service experience</li>
+                    <li>Do not post false or misleading reviews</li>
+                    <li>Be respectful in your communication</li>
+                    <li>Focus on service quality, not personal attributes</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">5. Prohibited Activities</h4>
+                  <p class="text-muted mb-3">Users must not:</p>
+                  <ul class="text-muted">
+                    <li>Engage in fraudulent activities</li>
+                    <li>Harass, abuse, or threaten other users</li>
+                    <li>Attempt to bypass platform fees</li>
+                    <li>Post false or misleading information</li>
+                    <li>Use the platform for illegal purposes</li>
+                    <li>Interfere with platform operations</li>
+                    <li>Share contact information to avoid platform fees</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">6. Service Provider Guidelines</h4>
+                  <ul class="text-muted">
+                    <li>Maintain minimum ₹500 deposit balance</li>
+                    <li>Complete verification before accepting bookings</li>
+                    <li>Respond to booking requests promptly</li>
+                    <li>Arrive on time for appointments</li>
+                    <li>Provide quality service and maintain professionalism</li>
+                    <li>Comply with commission payment obligations</li>
+                    <li>Keep profile and pricing information updated</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">7. Shop Owner Guidelines</h4>
+                  <ul class="text-muted">
+                    <li>Verify shop information and location accuracy</li>
+                    <li>Maintain accurate product listings and stock</li>
+                    <li>Process orders promptly</li>
+                    <li>Ensure product quality and authenticity</li>
+                    <li>Provide accurate delivery estimates</li>
+                    <li>Handle customer complaints professionally</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">8. Communication Guidelines</h4>
+                  <ul class="text-muted">
+                    <li>Use respectful and professional language</li>
+                    <li>Respond to messages in a timely manner</li>
+                    <li>Do not share personal contact information to avoid fees</li>
+                    <li>Resolve disputes through the platform</li>
+                    <li>Report inappropriate behavior immediately</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">9. Violation Consequences</h4>
+                  <p class="text-muted">Violations of these guidelines may result in:</p>
+                  <ul class="text-muted">
+                    <li>Warning notifications</li>
+                    <li>Temporary account suspension</li>
+                    <li>Permanent account termination</li>
+                    <li>Legal action if applicable</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">10. Reporting Violations</h4>
+                  <p class="text-muted">To report violations or concerns, contact:</p>
+                  <p class="text-muted">
+                    <strong>Support:</strong> support@hofix.com<br>
+                    <strong>Safety Team:</strong> safety@hofix.com
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Refund Policy -->
+          <div class="tab-pane fade" id="refund" role="tabpanel" aria-labelledby="refund-tab">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+              <div class="card-body p-5">
+                <h2 class="fw-bold text-primary mb-4">Refund Policy</h2>
+                <p class="text-muted mb-4">Last updated: {{ "2025-01-15" }}</p>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">1. Service Booking Refunds</h4>
+                  <p class="text-muted mb-3">Refund eligibility for service bookings:</p>
+                  <ul class="text-muted">
+                    <li><strong>Before Service Starts:</strong> Full refund if cancelled 2+ hours before scheduled time</li>
+                    <li><strong>Service Not Started:</strong> Full refund if service provider fails to arrive</li>
+                    <li><strong>Incomplete Service:</strong> Partial refund based on work completed and issue assessment</li>
+                    <li><strong>Unsatisfactory Service:</strong> Refund considered on case-by-case basis after review</li>
+                    <li><strong>No Refund:</strong> If service is completed satisfactorily or cancelled less than 2 hours before appointment</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">2. Product Order Refunds</h4>
+                  <p class="text-muted mb-3">Refund policy for shop orders:</p>
+                  <ul class="text-muted">
+                    <li><strong>Order Cancellation:</strong> Full refund if cancelled before order is processed</li>
+                    <li><strong>Return Policy:</strong> 7-day return window for defective or damaged products</li>
+                    <li><strong>Wrong Item:</strong> Full refund or replacement for incorrectly delivered items</li>
+                    <li><strong>Delivery Charges:</strong> Non-refundable unless order is cancelled or undelivered due to shop error</li>
+                    <li><strong>Custom Orders:</strong> Non-refundable unless product is defective</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">3. Wallet Refunds</h4>
+                  <p class="text-muted mb-3">Refund policy for wallet credits:</p>
+                  <ul class="text-muted">
+                    <li><strong>Razorpay Top-ups:</strong> Wallet top-ups are non-refundable but can be used for future services</li>
+                    <li><strong>Unused Credits:</strong> Credits remain in wallet and can be used at any time</li>
+                    <li><strong>Account Closure:</strong> Refund of unused credits may be processed upon account closure (subject to review)</li>
+                    <li><strong>Fraudulent Transactions:</strong> Full refund for unauthorized transactions after investigation</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">4. Provider Deposit Refunds</h4>
+                  <p class="text-muted mb-3">Refund policy for provider deposits:</p>
+                  <ul class="text-muted">
+                    <li><strong>Account Closure:</strong> Refund of remaining deposit balance (minus outstanding commissions) upon provider account closure</li>
+                    <li><strong>Commission Deductions:</strong> Non-refundable - commissions deducted for cash payments are final</li>
+                    <li><strong>Minimum Balance:</strong> ₹500 minimum deposit must be maintained - cannot be withdrawn while account is active</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">5. Refund Processing Time</h4>
+                  <ul class="text-muted">
+                    <li><strong>Payment Gateway:</strong> 5-7 business days for Razorpay refunds</li>
+                    <li><strong>Wallet Credits:</strong> Instant refund to wallet balance</li>
+                    <li><strong>Bank Transfer:</strong> 7-10 business days for bank account refunds</li>
+                    <li><strong>Provider Deposits:</strong> 10-15 business days after account closure approval</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">6. Refund Method</h4>
+                  <p class="text-muted mb-3">Refunds are processed through the original payment method:</p>
+                  <ul class="text-muted">
+                    <li>Razorpay payments → Refunded to original payment method</li>
+                    <li>Wallet payments → Refunded to wallet balance</li>
+                    <li>Cash payments → Credit to wallet or bank transfer (for service bookings)</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">7. Non-Refundable Items</h4>
+                  <ul class="text-muted">
+                    <li>Completed services that were satisfactory</li>
+                    <li>Delivery charges (unless undelivered due to shop/provider error)</li>
+                    <li>Commission fees deducted from provider deposits</li>
+                    <li>Platform service fees</li>
+                    <li>Custom or personalized products (unless defective)</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">8. How to Request a Refund</h4>
+                  <ol class="text-muted">
+                    <li>Log in to your Hofix account</li>
+                    <li>Navigate to "My Orders" or "Bookings"</li>
+                    <li>Select the order/booking you want to refund</li>
+                    <li>Click "Request Refund"</li>
+                    <li>Provide reason for refund request</li>
+                    <li>Submit request - our team will review within 24-48 hours</li>
+                  </ol>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">9. Dispute Resolution</h4>
+                  <p class="text-muted">If you disagree with a refund decision:</p>
+                  <ul class="text-muted">
+                    <li>Contact our support team with order details</li>
+                    <li>Provide evidence (photos, messages, receipts)</li>
+                    <li>Our team will review and provide a resolution</li>
+                    <li>Final decisions will be communicated via email</li>
+                  </ul>
+                </div>
+
+                <div class="mb-4">
+                  <h4 class="fw-bold mb-3">10. Contact for Refunds</h4>
+                  <p class="text-muted">
+                    <strong>Email:</strong> refunds@hofix.com<br>
+                    <strong>Phone:</strong> +91-XXX-XXXX-XXXX<br>
+                    <strong>Support Hours:</strong> Monday-Saturday, 9 AM - 6 PM IST
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+

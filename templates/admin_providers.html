@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Manage Providers{% endblock %}
+
+{% block content %}
+{% include "admin_auth_check.html" %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/feedback">
+                            <i class="fas fa-comments me-2"></i>Feedback Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/shops">
+                            <i class="fas fa-store me-2"></i>Shops
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/services">
+                            <i class="fas fa-tools me-2"></i>Services
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/bookings">
+                            <i class="fas fa-calendar-check me-2"></i>Bookings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/providers">
+                            <i class="fas fa-users me-2"></i>Providers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">
+                            <i class="fas fa-user-cog me-2"></i>User Management
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2"><i class="fas fa-users me-2"></i>Providers Management</h1>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Providers</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Available</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.available }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-toggle-on fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Unavailable</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.unavailable }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-toggle-off fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card shadow mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Filter by Availability</label>
+                            <select name="availability" class="form-select" onchange="this.form.submit()">
+                                <option value="all" {% if availability_filter == 'all' %}selected{% endif %}>All Providers</option>
+                                <option value="available" {% if availability_filter == 'available' %}selected{% endif %}>Available Only</option>
+                                <option value="unavailable" {% if availability_filter == 'unavailable' %}selected{% endif %}>Unavailable Only</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Providers Table -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">All Providers</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Provider Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Skills</th>
+                                    <th>Availability</th>
+                                    <th>Rating</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for provider in providers.items %}
+                                <tr>
+                                    <td>{{ provider.user.name if provider.user else 'N/A' }}</td>
+                                    <td>{{ provider.user.email if provider.user else 'N/A' }}</td>
+                                    <td>{{ provider.user.phone if provider.user else 'N/A' }}</td>
+                                    <td>
+                                        {% if provider.skills %}
+                                            {% for skill in provider.skills[:3] %}
+                                                <span class="badge bg-secondary me-1">{{ skill }}</span>
+                                            {% endfor %}
+                                            {% if provider.skills|length > 3 %}
+                                                <span class="badge bg-light text-dark">+{{ provider.skills|length - 3 }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">No skills</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input availability-toggle" 
+                                                   type="checkbox" 
+                                                   data-provider-id="{{ provider.id }}"
+                                                   {% if provider.availability %}checked{% endif %}>
+                                            <label class="form-check-label">
+                                                {% if provider.availability %}
+                                                    <span class="badge bg-success">Available</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Unavailable</span>
+                                                {% endif %}
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if provider.user %}
+                                            <div class="text-warning">
+                                                {% for i in range(provider.user.rating|int) %}★{% endfor %}
+                                                {% for i in range(5 - provider.user.rating|int) %}☆{% endfor %}
+                                            </div>
+                                            <small class="text-muted">({{ "%.1f"|format(provider.user.rating) }})</small>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ provider.user.created_at.strftime('%Y-%m-%d') if provider.user and provider.user.created_at else 'N/A' }}</small></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info" onclick="window.location.href='/profile'" title="View Profile">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">No providers found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if providers.pages > 1 %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if providers.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ providers.prev_num }}&availability={{ availability_filter }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            {% for page_num in providers.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                {% if page_num %}
+                                    {% if page_num == providers.page %}
+                                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                    {% else %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ page_num }}&availability={{ availability_filter }}">{{ page_num }}</a></li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if providers.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ providers.next_num }}&availability={{ availability_filter }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('token');
+    
+    // Toggle availability
+    document.querySelectorAll('.availability-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async function() {
+            const providerId = this.getAttribute('data-provider-id');
+            const availability = this.checked;
+            
+            try {
+                const response = await fetch(`/api/admin/providers/${providerId}/availability`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ availability: availability })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const label = this.nextElementSibling.querySelector('span');
+                    if (availability) {
+                        label.className = 'badge bg-success';
+                        label.textContent = 'Available';
+                    } else {
+                        label.className = 'badge bg-secondary';
+                        label.textContent = 'Unavailable';
+                    }
+                } else {
+                    alert(result.error || 'Failed to update availability');
+                    this.checked = !availability; // Revert
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to update availability');
+                this.checked = !availability; // Revert
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 48px 0 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+}
+.border-left-primary { border-left: 0.25rem solid #4e73df !important; }
+.border-left-success { border-left: 0.25rem solid #1cc88a !important; }
+.border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
+.text-xs { font-size: 0.7rem; }
+.text-gray-300 { color: #dddfeb !important; }
+.text-gray-800 { color: #5a5c69 !important; }
+</style>
+{% endblock %}
+

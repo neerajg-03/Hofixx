@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Feedback Management{% endblock %}
+
+{% block content %}
+{% include "admin_auth_check.html" %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/feedback">
+                            <i class="fas fa-comments me-2"></i>Feedback Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/shops">
+                            <i class="fas fa-store me-2"></i>Shops
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/services">
+                            <i class="fas fa-tools me-2"></i>Services
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/bookings">
+                            <i class="fas fa-calendar-check me-2"></i>Bookings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/providers">
+                            <i class="fas fa-users me-2"></i>Providers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">
+                            <i class="fas fa-user-cog me-2"></i>User Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/payments">
+                            <i class="fas fa-credit-card me-2"></i>Payments
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2"><i class="fas fa-comments me-2"></i>Feedback Management</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="exportBtn">Export</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Table -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">All Feedback</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Rating</th>
+                                    <th>Comment</th>
+                                    <th>Approved</th>
+                                    <th>Featured</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fb in feedback_list.items %}
+                                <tr>
+                                    <td><small>{{ (fb.id|string)[:8] }}</small></td>
+                                    <td>
+                                        {{ fb.user.name if fb.user else 'N/A' }}
+                                        <br><small class="text-muted">{{ fb.user.email if fb.user else '' }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="text-warning">
+                                            {% for i in range(fb.rating|int) %}★{% endfor %}
+                                            {% for i in range(5 - fb.rating|int) %}☆{% endfor %}
+                                        </div>
+                                    </td>
+                                    <td style="max-width: 350px;">{{ fb.comment or '' }}</td>
+                                    <td>
+                                        {% if fb.is_approved %}
+                                            <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if fb.is_featured %}
+                                            <span class="badge bg-info">Featured</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ fb.created_at.strftime('%Y-%m-%d %H:%M') if fb.created_at else 'N/A' }}</small></td>
+                                    <td>
+                                        {% if not fb.is_approved %}
+                                        <button class="btn btn-sm btn-success approve-btn" data-feedback-id="{{ fb.id|string }}" title="Approve">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-warning feature-btn" data-feedback-id="{{ fb.id|string }}" data-featured="{{ 'true' if fb.is_featured else 'false' }}" title="Toggle Feature">
+                                            <i class="fas fa-star"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger delete-btn" data-feedback-id="{{ fb.id|string }}" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">No feedback found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if feedback_list.pages > 1 %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if feedback_list.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ feedback_list.prev_num }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            {% if feedback_list.iter_pages is defined %}
+                                {% for page_num in feedback_list.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                    {% if page_num %}
+                                        {% if page_num == feedback_list.page %}
+                                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                        {% else %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a></li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                {% for page_num in range(1, feedback_list.pages + 1) %}
+                                    {% if page_num == feedback_list.page %}
+                                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                    {% else %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                            {% if feedback_list.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ feedback_list.next_num }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('token');
+
+    async function doAction(url, method='POST') {
+        const urlWithToken = url.includes('?') ? `${url}&token=${token}` : `${url}?token=${token}`;
+        const res = await fetch(urlWithToken, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return res;
+    }
+
+    document.querySelectorAll('.approve-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-feedback-id');
+            if (!confirm('Approve this feedback?')) return;
+            const res = await doAction(`/api/admin/feedback/${id}/approve`);
+            const data = await res.json();
+            if (res.ok) { alert('Approved'); location.reload(); } else { alert(data.error || 'Failed'); }
+        });
+    });
+
+    document.querySelectorAll('.feature-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-feedback-id');
+            const res = await doAction(`/api/admin/feedback/${id}/feature`);
+            const data = await res.json();
+            if (res.ok) { alert('Toggled'); location.reload(); } else { alert(data.error || 'Failed'); }
+        });
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-feedback-id');
+            if (!confirm('Delete this feedback?')) return;
+            const res = await doAction(`/api/admin/feedback/${id}/delete`, 'DELETE');
+            const data = await res.json();
+            if (res.ok) { alert('Deleted'); location.reload(); } else { alert(data.error || 'Failed'); }
+        });
+    });
+});
+</script>
+
+<style>
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 48px 0 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+}
+.border-left-primary { border-left: 0.25rem solid #4e73df !important; }
+.border-left-success { border-left: 0.25rem solid #1cc88a !important; }
+.border-left-info { border-left: 0.25rem solid #36b9cc !important; }
+.border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
+.text-xs { font-size: 0.7rem; }
+.text-gray-300 { color: #dddfeb !important; }
+.text-gray-800 { color: #5a5c69 !important; }
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
