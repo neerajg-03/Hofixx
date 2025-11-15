@@ -769,11 +769,17 @@ def add_to_cart():
         if not user:
             return jsonify({'message': 'User not found'}), 404
         
-        data = request.get_json()
+        data = request.get_json() or {}
         product_id = data.get('product_id')
         quantity = int(data.get('quantity', 1))
-        user_lat = data.get('user_lat', type=float) or user.latitude
-        user_lon = data.get('user_lon', type=float) or user.longitude
+        
+        # Get user location (optional, for proximity checking)
+        try:
+            user_lat = float(data.get('user_lat')) if data.get('user_lat') else user.latitude
+            user_lon = float(data.get('user_lon')) if data.get('user_lon') else user.longitude
+        except (ValueError, TypeError):
+            user_lat = user.latitude
+            user_lon = user.longitude
         
         if not product_id:
             return jsonify({'message': 'Product ID required'}), 400
