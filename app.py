@@ -105,9 +105,17 @@ def create_app():
     def support():
         return render_template('support.html')
     
+    @app.route('/policy')
+    def policy():
+        return render_template('policy.html')
+    
     @app.route('/orders')
     def orders():
         return render_template('orders.html')
+    
+    @app.route('/order/summary')
+    def order_summary():
+        return render_template('order_summary.html')
 
     # Public shops listing for homepage ads
     @app.route('/public/shops')
