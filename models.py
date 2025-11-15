@@ -76,7 +76,9 @@ class Provider(Document):
     user = fields.ReferenceField('User', required=True, unique=True)
     skills = fields.ListField(fields.StringField())  # List of skills instead of comma-separated
     availability = fields.BooleanField(default=True)
-    daily_rates = fields.DictField()  # Maps service name to daily rate, e.g., {"Electrician": 2000, "Plumber": 1800}
+    
+    # Deposit/Recharge balance for commission deduction (minimum ₹500 required)
+    deposit_balance = fields.FloatField(default=0.0)
     
     # Verification fields
     verification_status = fields.StringField(max_length=20, default='pending', 
@@ -142,9 +144,8 @@ class Booking(Document):
     # Reference to payment
     payment = fields.ReferenceField('Payment')
     
-    # Booking type and daily rate
+    # Booking type
     booking_type = fields.StringField(max_length=20, default='hourly', choices=['hourly', 'daily'])
-    daily_rate = fields.FloatField()  # Daily rate if booking_type is 'daily'
     
     meta = {
         'collection': 'bookings',
@@ -192,6 +193,28 @@ class WalletTransaction(Document):
     meta = {
         'collection': 'wallet_transactions',
         'indexes': ['user', '-created_at', 'source', 'external_reference']
+    }
+
+
+class ProviderDepositTransaction(Document):
+    """Track provider deposit/recharge transactions."""
+    provider = fields.ReferenceField('Provider', required=True)
+    amount = fields.FloatField(required=True)
+    transaction_type = fields.StringField(max_length=10, required=True,
+                                          choices=['credit', 'debit'])
+    source = fields.StringField(max_length=50, default='recharge',
+                                choices=['recharge', 'commission_deduction', 'admin_adjustment', 'refund'])
+    description = fields.StringField()
+    balance_after = fields.FloatField()
+    booking = fields.ReferenceField('Booking')  # Reference to booking if commission deduction
+    commission_rate = fields.FloatField()  # Commission rate percentage if applicable
+    commission_amount = fields.FloatField()  # Commission amount deducted
+    external_reference = fields.StringField()  # Razorpay order ID or payment ID
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+
+    meta = {
+        'collection': 'provider_deposit_transactions',
+        'indexes': ['provider', '-created_at', 'source', 'booking', 'external_reference']
     }
 
 
@@ -447,10 +470,15 @@ class Order(Document):
     shop = fields.ReferenceField('Shop', required=True)
     items = fields.ListField(fields.DictField())  # List of {product_id, product_name, quantity, price}
     total_amount = fields.FloatField(required=True)
+    delivery_charge = fields.FloatField(default=0.0)  # Delivery charge for this order
     delivery_address = fields.StringField(max_length=255, required=True)
     delivery_lat = fields.FloatField(required=True)
     delivery_lon = fields.FloatField(required=True)
     contact_phone = fields.StringField(max_length=30, required=True)
+    
+    # Multi-shop order grouping
+    shop_cluster_id = fields.StringField()  # ID to group orders from shops within 1km
+    is_shared_delivery = fields.BooleanField(default=False)  # True if delivery charge is shared with other shops
     
     # Order status
     status = fields.StringField(max_length=30, default='pending',
@@ -473,7 +501,7 @@ class Order(Document):
     
     meta = {
         'collection': 'orders',
-        'indexes': ['user', 'shop', 'status', 'created_at', 'delivery_lat', 'delivery_lon']
+        'indexes': ['user', 'shop', 'status', 'created_at', 'delivery_lat', 'delivery_lon', 'shop_cluster_id']
     }
 
 
