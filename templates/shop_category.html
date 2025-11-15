@@ -577,8 +577,8 @@ function addToCart(productId, shopId) {
     if (!res.ok) {
       throw new Error(data.message || 'Failed to add to cart');
     }
-      showNotification('Product added to cart!', 'success');
-      loadCart();
+    showNotification('Product added to cart!', 'success');
+    loadCart();
   })
   .catch(error => {
     console.error('Add to cart error:', error);
