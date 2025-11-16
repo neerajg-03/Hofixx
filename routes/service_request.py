@@ -612,15 +612,15 @@ def get_provider_service_requests():
         if not provider:
             return jsonify({'error': 'Provider profile not found', 'details': 'No provider profile associated with this user'}), 404
         
-        # Check minimum deposit balance (₹500 required)
+        # Check minimum deposit balance (₹50 required)
         from services.provider_deposit_service import check_minimum_balance
-        is_eligible, error_message = check_minimum_balance(provider, minimum_balance=500.0)
+        is_eligible, error_message = check_minimum_balance(provider, minimum_balance=50.0)
         if not is_eligible:
             return jsonify({
                 'error': 'Insufficient deposit balance',
                 'details': error_message,
                 'deposit_balance': float(provider.deposit_balance or 0.0),
-                'minimum_required': 500.0,
+                'minimum_required': 50.0,
                 'requires_recharge': True
             }), 403
         
