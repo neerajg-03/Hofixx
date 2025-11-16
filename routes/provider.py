@@ -984,9 +984,9 @@ def create_provider_deposit_razorpay_order():
         except (ValueError, TypeError):
             return jsonify({'error': 'Invalid amount format'}), 400
         
-        # Minimum recharge amount is ₹500
-        if amount < 500:
-            return jsonify({'error': 'Minimum recharge amount is ₹500'}), 400
+        # Minimum recharge amount is ₹50
+        if amount < 50:
+            return jsonify({'error': 'Minimum recharge amount is ₹50'}), 400
         
         amount_paise = int(round(amount * 100))
         
