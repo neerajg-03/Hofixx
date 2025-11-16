@@ -113,7 +113,7 @@
         <div>
           <i class="fas fa-exclamation-circle me-2"></i>
           <strong>Low Deposit Balance:</strong> 
-          <span id="depositAlertText">Your deposit balance is below ₹500. Recharge now to continue receiving service requests.</span>
+          <span id="depositAlertText">Your deposit balance is below ₹50. Recharge now to continue receiving service requests.</span>
         </div>
         <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rechargeDepositModal">
           <i class="fas fa-wallet me-2"></i>Recharge Now
@@ -147,7 +147,7 @@
                       <i class="fas fa-wallet text-primary"></i>
                     </div>
                     <h2 class="fw-bold mb-2 text-primary" id="depositBalance">₹0.00</h2>
-                    <p class="text-muted small mb-0">Minimum Required: <span class="fw-bold">₹500.00</span></p>
+                    <p class="text-muted small mb-0">Minimum Required: <span class="fw-bold" id="minimumRequiredDisplay">₹50.00</span></p>
                   </div>
                 </div>
                 <div class="col-md-6">
@@ -175,7 +175,7 @@
                       </div>
                       <div>
                         <h6 class="mb-1">Recharge</h6>
-                        <p class="text-muted small mb-0">Add ₹500 or more to your deposit account</p>
+                        <p class="text-muted small mb-0">Add ₹50 or more to your deposit account</p>
                       </div>
                     </div>
                   </div>
@@ -482,18 +482,18 @@
       <div class="modal-body">
         <div class="alert alert-info mb-3">
           <i class="fas fa-info-circle me-2"></i>
-          <strong>Minimum recharge:</strong> ₹500. This deposit is used to deduct Hofix commission (10%) when you receive cash payments.
+          <strong>Minimum recharge:</strong> ₹50. This deposit is used to deduct Hofix commission (10%) when you receive cash payments.
         </div>
         <form id="rechargeDepositForm">
           <div class="mb-3">
             <label class="form-label fw-semibold">Recharge Amount (₹) <span class="text-danger">*</span></label>
             <input type="number" class="form-control form-control-lg" id="rechargeAmount" 
-                   placeholder="Enter amount (minimum ₹500)" min="500" step="100" required>
-            <small class="form-text text-muted">Minimum amount is ₹500</small>
+                   placeholder="Enter amount (minimum ₹50)" min="50" step="10" required>
+            <small class="form-text text-muted">Minimum amount is ₹50</small>
           </div>
           <div class="mb-3">
             <div class="d-flex gap-2 flex-wrap">
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setRechargeAmount(500)">₹500</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="setRechargeAmount(50)">₹50</button>
               <button type="button" class="btn btn-outline-primary btn-sm" onclick="setRechargeAmount(1000)">₹1,000</button>
               <button type="button" class="btn btn-outline-primary btn-sm" onclick="setRechargeAmount(2000)">₹2,000</button>
               <button type="button" class="btn btn-outline-primary btn-sm" onclick="setRechargeAmount(5000)">₹5,000</button>
