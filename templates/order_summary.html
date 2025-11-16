@@ -293,7 +293,8 @@
     // Order ID and Date
     document.getElementById('orderId').textContent = `#${data.order_id || 'N/A'}`;
     const orderDate = data.created_at ? new Date(data.created_at) : new Date();
-    document.getElementById('orderDate').textContent = orderDate.toLocaleDateString('en-IN', {
+    document.getElementById('orderDate').textContent = orderDate.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -376,7 +377,7 @@
             ${index === statusIndex && !cancelled ? '<span class="badge bg-primary">Current</span>' : ''}
           </div>
           ${index === statusIndex && data[s.key + '_at'] ? 
-            `<small class="text-muted">${new Date(data[s.key + '_at']).toLocaleString('en-IN')}</small>` : ''}
+            `<small class="text-muted">${new Date(data[s.key + '_at']).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</small>` : ''}
         </div>
       `;
     }).join('');
@@ -524,4 +525,5 @@
   }
 </script>
 {% endblock %}
+
 
