@@ -1246,10 +1246,16 @@
 
     const balance = summary.deposit_balance || 0;
     const isEligible = summary.is_eligible || false;
-    const minimumRequired = summary.minimum_required || 500;
+    const minimumRequired = summary.minimum_required || 50;
 
     // Update balance display
     document.getElementById('depositBalance').textContent = `₹${balance.toFixed(2)}`;
+    
+    // Update minimum required display
+    const minimumRequiredEl = document.getElementById('minimumRequiredDisplay');
+    if (minimumRequiredEl) {
+      minimumRequiredEl.textContent = `₹${minimumRequired.toFixed(2)}`;
+    }
 
     // Update status badge and text
     const statusBadge = document.getElementById('depositStatusBadge');
@@ -1353,9 +1359,9 @@
       const msgEl = document.getElementById('rechargeMsg');
 
       // Validate amount
-      if (!amount || amount < 500) {
+      if (!amount || amount < 50) {
         msgEl.className = 'alert alert-danger';
-        msgEl.querySelector('span').textContent = 'Minimum recharge amount is ₹500';
+        msgEl.querySelector('span').textContent = 'Minimum recharge amount is ₹50';
         msgEl.classList.remove('d-none');
         return;
       }
