@@ -1110,28 +1110,63 @@ async function placeOrders() {
     });
 
     // Place orders for each shop
-    const orderPromises = Object.values(shopGroups).map(group => {
-      return fetch('/api/orders/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          shop_id: group.shop_id,
-          delivery_address: deliveryAddress,
-          delivery_lat: deliveryLat,
-          delivery_lon: deliveryLon,
-          contact_phone: contactPhone,
-          payment_method: paymentMethod
-        })
-      }).then(res => res.json());
+    const orderPromises = Object.values(shopGroups).map(async group => {
+      try {
+        const response = await fetch('/api/orders/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            shop_id: group.shop_id,
+            delivery_address: deliveryAddress,
+            delivery_lat: deliveryLat,
+            delivery_lon: deliveryLon,
+            contact_phone: contactPhone,
+            payment_method: paymentMethod
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          return { error: data.message || 'Failed to create order', shop_name: group.shop_name };
+        }
+        return { success: true, data };
+      } catch (error) {
+        return { error: error.message || 'Failed to create order', shop_name: group.shop_name };
+      }
     });
 
     Promise.all(orderPromises)
       .then(async results => {
-        const successfulOrders = results.filter(r => r.order_id);
+        // Flatten orders from all responses
+        const successfulOrders = [];
+        const errors = [];
+        
+        results.forEach(result => {
+          if (result.error) {
+            errors.push(`${result.shop_name || 'Shop'}: ${result.error}`);
+          } else if (result.success && result.data) {
+            const response = result.data;
+            if (response.orders && Array.isArray(response.orders)) {
+              response.orders.forEach(order => {
+                if (order.order_id) {
+                  successfulOrders.push(order);
+                }
+              });
+            } else if (response.order_id) {
+              // Backward compatibility: single order response
+              successfulOrders.push(response);
+            }
+          }
+        });
+        
         const successCount = successfulOrders.length;
+        
+        // If there were errors but some orders succeeded, show warning
+        if (errors.length > 0 && successCount > 0) {
+          showNotification(`${errors.length} order(s) failed: ${errors.join('; ')}. Processing successful orders...`, 'warning');
+        }
         
         if (successCount > 0) {
           // If Razorpay payment, process payment for each order sequentially
@@ -1343,12 +1378,17 @@ async function placeOrders() {
             }, 1500);
           }
         } else {
-          showNotification('Failed to place orders', 'error');
+          // No successful orders - show all errors
+          if (errors.length > 0) {
+            showNotification(`Failed to place orders: ${errors.join('; ')}`, 'error');
+          } else {
+            showNotification('Failed to place orders. Please try again.', 'error');
+          }
         }
       })
       .catch(error => {
         console.error('Place order error:', error);
-        showNotification('Failed to place orders', 'error');
+        showNotification(error.message || 'Failed to place orders', 'error');
       });
   });
 }
