@@ -123,8 +123,8 @@ def deduct_commission(provider, booking, commission_rate=10.0):
     }
 
 
-def check_minimum_balance(provider, minimum_balance=500.0):
-    """Check if provider has minimum required balance (default ₹500)."""
+def check_minimum_balance(provider, minimum_balance=50.0):
+    """Check if provider has minimum required balance (default ₹50)."""
     if not provider:
         return False, 'Provider not found'
     
@@ -147,8 +147,8 @@ def get_deposit_summary(provider, limit=20):
     
     summary = {
         'deposit_balance': round(float(provider.deposit_balance or 0.0), 2),
-        'minimum_required': 500.0,
-        'is_eligible': float(provider.deposit_balance or 0.0) >= 500.0,
+        'minimum_required': 50.0,
+        'is_eligible': float(provider.deposit_balance or 0.0) >= 50.0,
         'transactions': [{
             'id': str(tx.id),
             'amount': tx.amount,
@@ -164,4 +164,5 @@ def get_deposit_summary(provider, limit=20):
         } for tx in transactions]
     }
     return summary
+
 
