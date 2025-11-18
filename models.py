@@ -81,8 +81,8 @@ class Provider(Document):
     deposit_balance = fields.FloatField(default=0.0)
     
     # Verification fields
-    verification_status = fields.StringField(max_length=20, default='pending', 
-                                           choices=['pending', 'verified', 'rejected'])
+    verification_status = fields.StringField(max_length=20, default='not_started', 
+                                           choices=['not_started', 'pending', 'verified', 'rejected'])
     # Document URLs
     aadhaar_front_url = fields.StringField(max_length=500)
     aadhaar_back_url = fields.StringField(max_length=500)
@@ -108,7 +108,8 @@ class Provider(Document):
     
     meta = {
         'collection': 'providers',
-        'indexes': ['user', 'availability', 'verification_status']
+        'indexes': ['user', 'availability', 'verification_status'],
+        'strict': False  # Allow fields in database that aren't in model definition
     }
 
 
