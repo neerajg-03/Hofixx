@@ -224,19 +224,50 @@ def create_app():
     @socketio.on('join_provider_room')
     def on_join_provider_room(data):
         try:
-            provider_id = data.get('provider_id')
-            print(f'=== PROVIDER JOINING ROOM ===')
-            print(f'Provider ID received: {provider_id}')
-            print(f'Data received: {data}')
-            if provider_id:
-                room_name = f"provider_{provider_id}"
+            from flask_jwt_extended import decode_token
+            from models import User, Provider
+            from bson import ObjectId
+            
+            # Try to get user_id from token first
+            token = data.get('token')
+            user_id = None
+            
+            if token:
+                try:
+                    decoded_token = decode_token(token)
+                    # Handle different token formats
+                    sub = decoded_token.get('sub')
+                    if isinstance(sub, dict):
+                        user_id = sub.get('id') or sub.get('user_id')
+                    else:
+                        user_id = sub
+                    print(f'Decoded user_id from token: {user_id}')
+                except Exception as e:
+                    print(f'Error decoding token: {e}')
+            
+            # Fallback to provider_id if provided
+            if not user_id:
+                provider_id = data.get('provider_id')
+                if provider_id:
+                    # Try to get user_id from provider
+                    try:
+                        provider = Provider.objects(id=ObjectId(provider_id)).first()
+                        if provider and provider.user:
+                            user_id = str(provider.user.id)
+                    except:
+                        user_id = provider_id
+            
+            if user_id:
+                room_name = f"provider_{user_id}"
                 join_room(room_name)
                 join_room('all_providers')
-                print(f'Provider {provider_id} joined rooms: {room_name}, all_providers')
+                print(f'Provider (user_id: {user_id}) joined rooms: {room_name}, all_providers')
             else:
-                print('No provider_id provided')
+                print('No user_id or provider_id provided in join_provider_room')
         except Exception as e:
             print(f'Error in join_provider_room event: {e}')
+            import traceback
+            traceback.print_exc()
     
     @socketio.on('join_booking_room')
     def on_join_booking_room(data):
@@ -247,6 +278,22 @@ def create_app():
                 print(f'Client joined booking room: {booking_id}')
         except Exception as e:
             print(f'Error in join_booking_room event: {e}')
+    
+    @socketio.on('join_admin_room')
+    def on_join_admin_room(data):
+        try:
+            from flask_jwt_extended import decode_token
+            token = data.get('token')
+            if token:
+                decoded_token = decode_token(token)
+                user_id = decoded_token.get('sub', {}).get('id') or decoded_token.get('sub')
+                # Verify user is admin
+                user = User.objects(id=user_id).first()
+                if user and user.role == 'admin':
+                    join_room('admin_room')
+                    print(f'Admin {user_id} joined admin room')
+        except Exception as e:
+            print(f'Error joining admin room: {e}')
     
     # Chat events
     @socketio.on('chat_message')
