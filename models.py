@@ -106,6 +106,14 @@ class Provider(Document):
     verification_submitted_at = fields.DateTimeField()
     verification_updated_at = fields.DateTimeField(default=datetime.utcnow)
     
+    # Bank account details for payouts
+    bank_account_holder_name = fields.StringField(max_length=120)
+    bank_account_number = fields.StringField(max_length=50)
+    bank_ifsc_code = fields.StringField(max_length=20)
+    bank_name = fields.StringField(max_length=100)
+    bank_branch = fields.StringField(max_length=100)
+    bank_account_verified = fields.BooleanField(default=False)
+    
     meta = {
         'collection': 'providers',
         'indexes': ['user', 'availability', 'verification_status'],
@@ -158,13 +166,23 @@ class Payment(Document):
     booking = fields.ReferenceField('Booking')  # Optional, for service bookings
     order = fields.ReferenceField('Order')  # Optional, for shop orders
     user = fields.ReferenceField('User', required=True)
-    amount = fields.FloatField(required=True)
+    amount = fields.FloatField(required=True)  # Original amount before discount
+    final_amount = fields.FloatField()  # Amount after discount
+    discount_percentage = fields.FloatField(default=0.0)  # Discount percentage applied
+    discount_amount = fields.FloatField(default=0.0)  # Discount amount in rupees
     currency = fields.StringField(max_length=10, default='INR')
     method = fields.StringField(max_length=30, required=True, 
-                               choices=['Cash', 'Card', 'UPI', 'Bank Transfer', 'Razorpay'])
+                               choices=['Cash', 'Card', 'UPI', 'Bank Transfer', 'Razorpay', 'Hofix'])
     status = fields.StringField(max_length=30, default='Pending',
                                choices=['Success', 'Failed', 'Pending', 'Refunded'])
     created_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    # Commission and payout fields
+    commission_percentage = fields.FloatField(default=15.0)  # Commission percentage (15%)
+    commission_amount = fields.FloatField(default=0.0)  # Commission amount deducted
+    provider_payout_amount = fields.FloatField(default=0.0)  # Amount to be paid to provider
+    payout_status = fields.StringField(max_length=30, default='pending',
+                                      choices=['pending', 'processing', 'completed', 'failed'])
     
     # Razorpay specific fields
     razorpay_payment_id = fields.StringField()
@@ -173,7 +191,7 @@ class Payment(Document):
     
     meta = {
         'collection': 'payments',
-        'indexes': ['booking', 'order', 'user', 'status']
+        'indexes': ['booking', 'order', 'user', 'status', 'payout_status']
     }
 
 
@@ -521,6 +539,68 @@ class DeliveryPartner(Document):
     meta = {
         'collection': 'delivery_partners',
         'indexes': ['user', 'is_available', 'current_location_lat', 'current_location_lon']
+    }
+
+
+class ChatMessage(Document):
+    """Chat message model for user-provider communication"""
+    booking = fields.ReferenceField('Booking', required=True)
+    sender = fields.ReferenceField('User', required=True)
+    sender_type = fields.StringField(max_length=20, required=True, choices=['user', 'provider'])
+    message_type = fields.StringField(max_length=20, default='text', choices=['text', 'file', 'location', 'image'])
+    content = fields.StringField()
+    file_url = fields.StringField(max_length=500)
+    file_name = fields.StringField(max_length=255)
+    location_lat = fields.FloatField()
+    location_lon = fields.FloatField()
+    
+    # For easier querying
+    booking_id = fields.StringField(required=True)
+    sender_id = fields.StringField(required=True)
+    provider_id = fields.StringField()
+    customer_name = fields.StringField(max_length=120)
+    provider_name = fields.StringField(max_length=120)
+    
+    status = fields.StringField(max_length=20, default='sent', choices=['sent', 'delivered', 'read'])
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    meta = {
+        'collection': 'chat_messages',
+        'indexes': ['booking', 'booking_id', 'sender', 'sender_id', 'created_at', 'sender_type']
+    }
+
+
+class ProviderPayout(Document):
+    """Track provider payouts after commission deduction"""
+    provider = fields.ReferenceField('Provider', required=True)
+    payment = fields.ReferenceField('Payment', required=True)
+    booking = fields.ReferenceField('Booking', required=True)
+    
+    # Amount details
+    original_amount = fields.FloatField(required=True)  # Amount paid by customer (after discount)
+    commission_percentage = fields.FloatField(default=15.0)
+    commission_amount = fields.FloatField(required=True)
+    payout_amount = fields.FloatField(required=True)  # Amount to be transferred to provider
+    
+    # Bank transfer details
+    bank_account_holder_name = fields.StringField(max_length=120)
+    bank_account_number = fields.StringField(max_length=50)
+    bank_ifsc_code = fields.StringField(max_length=20)
+    bank_name = fields.StringField(max_length=100)
+    
+    # Payout status
+    status = fields.StringField(max_length=30, default='pending',
+                               choices=['pending', 'processing', 'completed', 'failed', 'cancelled'])
+    transfer_reference = fields.StringField(max_length=100)  # External transfer reference ID
+    transfer_date = fields.DateTimeField()
+    failure_reason = fields.StringField()
+    
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    updated_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    meta = {
+        'collection': 'provider_payouts',
+        'indexes': ['provider', 'payment', 'booking', 'status', 'created_at']
     }
 
 
