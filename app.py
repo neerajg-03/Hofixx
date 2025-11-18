@@ -77,6 +77,7 @@ def create_app():
     from routes.shop import shop_bp
     from routes.wallet import wallet_bp
     from routes.verification import verification_bp
+    from routes.payouts import payouts_bp
 
     app.register_blueprint(auth_bp, url_prefix='/')
     app.register_blueprint(booking_bp, url_prefix='/')
@@ -92,6 +93,7 @@ def create_app():
     app.register_blueprint(shop_bp, url_prefix='/')
     app.register_blueprint(wallet_bp, url_prefix='/')
     app.register_blueprint(verification_bp, url_prefix='/')
+    app.register_blueprint(payouts_bp, url_prefix='/')
 
     @app.route('/')
     def home():
@@ -278,6 +280,44 @@ def create_app():
                 print(f'Client joined booking room: {booking_id}')
         except Exception as e:
             print(f'Error in join_booking_room event: {e}')
+    
+    @socketio.on('join_user_room')
+    def on_join_user_room(data):
+        try:
+            from flask_jwt_extended import decode_token
+            from models import User
+            from bson import ObjectId
+            
+            # Try to get user_id from token first
+            token = data.get('token')
+            user_id = None
+            
+            if token:
+                try:
+                    decoded_token = decode_token(token)
+                    sub = decoded_token.get('sub')
+                    if isinstance(sub, dict):
+                        user_id = sub.get('id') or sub.get('user_id')
+                    else:
+                        user_id = sub
+                    print(f'Decoded user_id from token: {user_id}')
+                except Exception as e:
+                    print(f'Error decoding token: {e}')
+            
+            # Fallback to user_id if provided
+            if not user_id:
+                user_id = data.get('user_id')
+            
+            if user_id:
+                room_name = f"user_{user_id}"
+                join_room(room_name)
+                print(f'User (user_id: {user_id}) joined user room: {room_name}')
+            else:
+                print('No user_id provided in join_user_room')
+        except Exception as e:
+            print(f'Error in join_user_room event: {e}')
+            import traceback
+            traceback.print_exc()
     
     @socketio.on('join_admin_room')
     def on_join_admin_room(data):
