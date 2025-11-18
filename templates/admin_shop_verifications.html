@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Shop Verifications{% endblock %}
+
+{% block content %}
+{% include "admin_auth_check.html" %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0"><i class="fas fa-store me-2"></i>Shop Verifications</h2>
+    <div>
+      <button class="btn btn-outline-primary btn-sm" onclick="loadPendingShops()">
+        <i class="fas fa-sync me-1"></i>Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-4" id="verificationTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+        Pending Verification
+        <span class="badge bg-warning ms-2" id="pendingCount">0</span>
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="verified-tab" data-bs-toggle="tab" data-bs-target="#verified" type="button" role="tab">
+        Verified Shops
+        <span class="badge bg-success ms-2" id="verifiedCount">0</span>
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="verificationTabContent">
+    <!-- Pending Shops -->
+    <div class="tab-pane fade show active" id="pending" role="tabpanel">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div id="pendingShopsList" class="row g-3">
+            <!-- Pending shops will be loaded here -->
+          </div>
+          <div id="pendingEmpty" class="text-center py-5 d-none">
+            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+            <h5 class="text-muted">No pending verifications</h5>
+            <p class="text-muted">All shops have been verified!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verified Shops -->
+    <div class="tab-pane fade" id="verified" role="tabpanel">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div id="verifiedShopsList" class="row g-3">
+            <!-- Verified shops will be loaded here -->
+          </div>
+          <div id="verifiedEmpty" class="text-center py-5 d-none">
+            <i class="fas fa-store fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No verified shops yet</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Get token from localStorage or cookie
+function getAuthToken() {
+  const localToken = localStorage.getItem('token');
+  if (localToken) return localToken;
+  
+  const cookieToken = getCookie('access_token_cookie');
+  if (cookieToken) return cookieToken;
+  
+  return null;
+}
+
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+}
+
+(function() {
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadPendingShops();
+    
+    // Load verified when tab is clicked
+    const verifiedTab = document.getElementById('verified-tab');
+    if (verifiedTab) {
+      verifiedTab.addEventListener('shown.bs.tab', function() {
+        loadVerifiedShops();
+      });
+    }
+    
+    // Use event delegation for buttons (work with dynamically added buttons)
+    document.addEventListener('click', function(e) {
+      const target = e.target.closest('button');
+      if (!target) return;
+      
+      // Handle verify button
+      if (target.classList.contains('verify-shop-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const shopId = target.getAttribute('data-shop-id');
+        console.log('Verify button clicked, shopId:', shopId, 'window.verifyShop exists:', typeof window.verifyShop);
+        if (shopId) {
+          if (window.verifyShop) {
+            window.verifyShop(shopId);
+          } else {
+            console.error('window.verifyShop is not defined');
+            alert('Verify function not loaded. Please refresh the page.');
+          }
+        }
+        return;
+      }
+      
+      // Handle reject button
+      if (target.classList.contains('reject-shop-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const shopId = target.getAttribute('data-shop-id');
+        const action = target.getAttribute('data-action') || 'reject';
+        console.log('Reject button clicked, shopId:', shopId, 'action:', action, 'window.rejectShop exists:', typeof window.rejectShop);
+        if (shopId) {
+          if (window.rejectShop) {
+            window.rejectShop(shopId, action);
+          } else {
+            console.error('window.rejectShop is not defined');
+            alert('Reject function not loaded. Please refresh the page.');
+          }
+        }
+        return;
+      }
+    });
+  });
+
+  async function loadPendingShops() {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+      
+      const res = await fetch('/api/admin/shop-verifications?status=pending', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.shops && data.shops.length > 0) {
+        document.getElementById('pendingCount').textContent = data.shops.length;
+        renderShops(data.shops, 'pending');
+        document.getElementById('pendingEmpty').classList.add('d-none');
+      } else {
+        document.getElementById('pendingCount').textContent = '0';
+        document.getElementById('pendingShopsList').innerHTML = '';
+        document.getElementById('pendingEmpty').classList.remove('d-none');
+      }
+    } catch (error) {
+      console.error('Error loading pending shops:', error);
+      showNotification('Failed to load pending shops', 'error');
+    }
+  }
+
+  async function loadVerifiedShops() {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+      
+      const res = await fetch('/api/admin/shop-verifications?status=verified', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.shops && data.shops.length > 0) {
+        document.getElementById('verifiedCount').textContent = data.shops.length;
+        renderShops(data.shops, 'verified');
+        document.getElementById('verifiedEmpty').classList.add('d-none');
+      } else {
+        document.getElementById('verifiedCount').textContent = '0';
+        document.getElementById('verifiedShopsList').innerHTML = '';
+        document.getElementById('verifiedEmpty').classList.remove('d-none');
+      }
+    } catch (error) {
+      console.error('Error loading verified shops:', error);
+      showNotification('Failed to load verified shops', 'error');
+    }
+  }
+
+  function renderShops(shops, status) {
+    const container = status === 'pending' ? 
+      document.getElementById('pendingShopsList') : 
+      document.getElementById('verifiedShopsList');
+    
+    container.innerHTML = '';
+    
+    shops.forEach(shop => {
+      const card = document.createElement('div');
+      card.className = 'col-md-6 col-lg-4';
+      card.innerHTML = `
+        <div class="card h-100 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex align-items-start mb-3">
+              ${shop.image_url ? 
+                `<img src="${shop.image_url}" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">` : 
+                '<div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;"><i class="fas fa-store fa-2x text-muted"></i></div>'
+              }
+              <div class="flex-grow-1">
+                <h5 class="card-title mb-1">${shop.name}</h5>
+                <span class="badge bg-secondary text-capitalize mb-2">${Array.isArray(shop.category) ? shop.category.join(', ') : shop.category}</span>
+                ${shop.is_verified ? '<span class="badge bg-success ms-1">Verified</span>' : '<span class="badge bg-warning ms-1">Pending</span>'}
+              </div>
+            </div>
+            
+            ${shop.description ? `<p class="text-muted small mb-2">${shop.description}</p>` : ''}
+            
+            <div class="mb-2">
+              <p class="small mb-1">
+                <i class="fas fa-map-marker-alt me-1 text-muted"></i>
+                <span class="text-muted">${shop.address}</span>
+              </p>
+              <p class="small mb-1">
+                <i class="fas fa-phone me-1 text-muted"></i>
+                <span class="text-muted">${shop.contact_phone}</span>
+              </p>
+              ${shop.contact_email ? `
+              <p class="small mb-1">
+                <i class="fas fa-envelope me-1 text-muted"></i>
+                <span class="text-muted">${shop.contact_email}</span>
+              </p>
+              ` : ''}
+              <p class="small mb-1">
+                <i class="fas fa-user me-1 text-muted"></i>
+                <span class="text-muted">Owner: ${shop.owner_name}</span>
+              </p>
+              ${shop.created_at ? `
+              <p class="small mb-0 text-muted">
+                <i class="fas fa-calendar me-1"></i>
+                Registered: ${new Date(shop.created_at).toLocaleDateString()}
+              </p>
+              ` : ''}
+            </div>
+            
+            <div class="d-flex gap-2 mt-3">
+              ${status === 'pending' ? `
+                <button class="btn btn-success btn-sm flex-fill verify-shop-btn" data-shop-id="${shop.id}">
+                  <i class="fas fa-check me-1"></i>Verify
+                </button>
+                <button class="btn btn-danger btn-sm flex-fill reject-shop-btn" data-shop-id="${shop.id}">
+                  <i class="fas fa-times me-1"></i>Reject
+                </button>
+              ` : `
+                <button class="btn btn-outline-danger btn-sm w-100 reject-shop-btn" data-shop-id="${shop.id}" data-action="deactivate">
+                  <i class="fas fa-ban me-1"></i>Deactivate
+                </button>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // Make functions globally accessible
+  window.verifyShop = async function(shopId) {
+    console.log('verifyShop called with shopId:', shopId);
+    
+    if (!confirm('Are you sure you want to verify this shop?')) {
+      console.log('User cancelled verification');
+      return;
+    }
+    
+    try {
+      const token = getAuthToken();
+      console.log('Token retrieved:', token ? 'Yes' : 'No');
+      
+      if (!token) {
+        showNotification('Authentication required. Please login again.', 'error');
+        window.location.href = '/login';
+        return;
+      }
+      
+      console.log('Verifying shop:', shopId);
+      
+      const res = await fetch(`/api/admin/shop-verifications/${shopId}/verify`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await res.json();
+      console.log('Verify response:', res.status, data);
+      
+      if (res.ok) {
+        showNotification('Shop verified successfully!', 'success');
+        setTimeout(() => {
+          loadPendingShops();
+        }, 500);
+      } else {
+        showNotification(data.error || data.message || 'Failed to verify shop', 'error');
+      }
+    } catch (error) {
+      console.error('Error verifying shop:', error);
+      showNotification('Failed to verify shop', 'error');
+    }
+  }
+
+  window.rejectShop = async function(shopId, action = null) {
+    // Determine action if not provided
+    if (!action) {
+      const btn = document.querySelector(`button[data-shop-id="${shopId}"].reject-shop-btn`);
+      action = btn?.getAttribute('data-action') || (btn?.textContent.includes('Deactivate') ? 'deactivate' : 'reject');
+    }
+    
+    const message = action === 'deactivate' ? 
+      'Are you sure you want to deactivate this shop?' : 
+      'Are you sure you want to reject this shop? It will be deactivated.';
+    
+    if (!confirm(message)) return;
+    
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        showNotification('Authentication required. Please login again.', 'error');
+        window.location.href = '/login';
+        return;
+      }
+      
+      const res = await fetch(`/api/admin/shop-verifications/${shopId}/reject`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        showNotification(action === 'deactivate' ? 'Shop deactivated successfully!' : 'Shop rejected and deactivated!', 'success');
+        loadPendingShops();
+        if (document.getElementById('verified-tab').classList.contains('active')) {
+          loadVerifiedShops();
+        }
+      } else {
+        showNotification(data.error || 'Failed to reject shop', 'error');
+      }
+    } catch (error) {
+      console.error('Error rejecting shop:', error);
+      showNotification('Failed to reject shop', 'error');
+    }
+  }
+
+  function showNotification(message, type = 'info') {
+    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+    setTimeout(() => alert.remove(), 3000);
+  }
+
+  // Make showNotification globally accessible too
+  window.showNotification = showNotification;
+})();
+</script>
+{% endblock %}
+
