@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}{{ service.name }} - Service Details{% endblock %}
+
+{% block styles %}
+<style>
+.service-detail-hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 4rem 0;
+}
+
+.service-icon-large {
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem;
+}
+
+.service-icon-large i {
+  font-size: 3rem;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+
+.pricing-card {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.btn-book-now {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+}
+
+.btn-book-now:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+.service-features {
+  background: #f8f9fa;
+  padding: 3rem 0;
+}
+
+.testimonial-card {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.star-rating {
+  color: #ffc107;
+  font-size: 1.2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Service Detail Hero Section -->
+<section class="service-detail-hero">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6">
+        <div class="service-icon-large">
+          <i id="serviceIcon" class="{{ service_icon }}"></i>
+        </div>
+        <h1 id="serviceName" class="display-4 fw-bold mb-3">{{ service.name }}</h1>
+        <p id="serviceCategory" class="lead mb-4">{{ service.category }}</p>
+        <div class="d-flex align-items-center gap-4">
+          <div>
+            <span class="badge bg-success fs-6 px-3 py-2">Available</span>
+          </div>
+          <div>
+            <span class="star-rating">
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+            </span>
+            <span class="ms-2">4.8 (120+ reviews)</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="pricing-card">
+          <h3 class="fw-bold mb-3">Starting From</h3>
+          <div class="display-4 fw-bold mb-3" id="servicePrice">₹{{ service.base_price }}</div>
+          <p class="mb-4">Professional service with guaranteed satisfaction</p>
+          <a href="/booking-map?service_id={{ service.id }}" id="bookNowBtn" class="btn btn-light btn-lg px-4 py-3 rounded-pill">
+            <i class="fas fa-calendar-plus me-2"></i>Book Now
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Service Features Section -->
+<section class="service-features">
+  <div class="container">
+    <div class="row mb-5">
+      <div class="col-lg-8 mx-auto text-center">
+        <h2 class="display-6 fw-bold text-primary mb-3">Why Choose Our Service?</h2>
+        <p class="lead text-muted">Professional, reliable, and affordable solutions for all your needs</p>
+      </div>
+    </div>
+    
+    <div class="row g-4">
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card text-center">
+          <div class="mb-3">
+            <i class="fas fa-clock text-primary" style="font-size: 2.5rem;"></i>
+          </div>
+          <h5 class="fw-bold mb-3">Quick Response</h5>
+          <p class="text-muted">We respond to your requests within 30 minutes and arrive on time.</p>
+        </div>
+      </div>
+      
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card text-center">
+          <div class="mb-3">
+            <i class="fas fa-shield-alt text-primary" style="font-size: 2.5rem;"></i>
+          </div>
+          <h5 class="fw-bold mb-3">Insured & Licensed</h5>
+          <p class="text-muted">All our professionals are fully licensed and insured for your peace of mind.</p>
+        </div>
+      </div>
+      
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card text-center">
+          <div class="mb-3">
+            <i class="fas fa-star text-primary" style="font-size: 2.5rem;"></i>
+          </div>
+          <h5 class="fw-bold mb-3">Quality Guarantee</h5>
+          <p class="text-muted">100% satisfaction guarantee with free follow-up if needed.</p>
+        </div>
+      </div>
+      
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card text-center">
+          <div class="mb-3">
+            <i class="fas fa-tools text-primary" style="font-size: 2.5rem;"></i>
+          </div>
+          <h5 class="fw-bold mb-3">Professional Tools</h5>
+          <p class="text-muted">We bring all necessary tools and equipment for the job.</p>
+        </div>
+      </div>
+      
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card text-center">
+          <div class="mb-3">
+            <i class="fas fa-dollar-sign text-primary" style="font-size: 2.5rem;"></i>
+          </div>
+          <h5 class="fw-bold mb-3">Transparent Pricing</h5>
+          <p class="text-muted">No hidden fees. Get upfront pricing before we start the work.</p>
+        </div>
+      </div>
+      
+      <div class="col-lg-4 col-md-6">
+        <div class="feature-card text-center">
+          <div class="mb-3">
+            <i class="fas fa-headset text-primary" style="font-size: 2.5rem;"></i>
+          </div>
+          <h5 class="fw-bold mb-3">24/7 Support</h5>
+          <p class="text-muted">Round-the-clock customer support for all your queries.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- What's Included Section -->
+<section class="py-5 bg-white">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 mx-auto">
+        <h3 class="fw-bold text-center mb-5">What's Included in This Service</h3>
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="d-flex align-items-start">
+              <div class="flex-shrink-0">
+                <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold mb-2">Professional Assessment</h6>
+                <p class="text-muted small">Thorough evaluation of your requirements</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="d-flex align-items-start">
+              <div class="flex-shrink-0">
+                <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold mb-2">Quality Materials</h6>
+                <p class="text-muted small">High-quality materials and supplies</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="d-flex align-items-start">
+              <div class="flex-shrink-0">
+                <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold mb-2">Expert Workmanship</h6>
+                <p class="text-muted small">Skilled professionals with years of experience</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="d-flex align-items-start">
+              <div class="flex-shrink-0">
+                <i class="fas fa-check-circle text-success me-3" style="font-size: 1.5rem;"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold mb-2">Cleanup Service</h6>
+                <p class="text-muted small">Complete cleanup after the job is done</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Customer Reviews Section -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="row mb-5">
+      <div class="col-lg-8 mx-auto text-center">
+        <h3 class="fw-bold text-primary mb-3">What Our Customers Say</h3>
+        <p class="text-muted">Real reviews from satisfied customers</p>
+      </div>
+    </div>
+    
+    <div class="row g-4" id="serviceReviews">
+      <!-- Reviews will be loaded dynamically -->
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 bg-primary text-white">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <h3 class="fw-bold mb-3">Ready to Get Started?</h3>
+        <p class="mb-0">Book your service now and experience professional quality work at affordable prices.</p>
+      </div>
+      <div class="col-lg-4 text-lg-end">
+        <a href="/booking-map?service_id={{ service.id }}" id="ctaBookBtn" class="btn btn-light btn-lg px-4 py-3 rounded-pill">
+          <i class="fas fa-calendar-plus me-2"></i>Book Now
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+  // Page is already rendered with server-side data
+  console.log('Service detail page loaded');
+  
+  // Load reviews for this service
+  loadServiceReviews();
+});
+
+// Load reviews for the service
+async function loadServiceReviews() {
+  try {
+    const response = await fetch('/api/feedback/featured');
+    const data = await response.json();
+    
+    if (response.ok && data.feedback && data.feedback.length > 0) {
+      displayServiceReviews(data.feedback.slice(0, 3)); // Show max 3 reviews
+    } else {
+      showNoReviews();
+    }
+  } catch (error) {
+    console.error('Error loading service reviews:', error);
+    showNoReviews();
+  }
+}
+
+// Display reviews on service page
+function displayServiceReviews(reviews) {
+  const container = document.getElementById('serviceReviews');
+  
+  container.innerHTML = reviews.map(review => {
+    const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+    const initials = review.name?.split(' ').map(n => n.charAt(0)).join('').toUpperCase() || 'U';
+    const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe'];
+    const bgColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    return `
+      <div class="col-lg-4">
+        <div class="service-review-card">
+          <div class="service-review-header">
+            <div class="service-review-avatar" style="background: linear-gradient(135deg, ${bgColor}, ${bgColor}dd);">
+              ${initials}
+            </div>
+            <div class="service-review-info">
+              <h6 class="service-reviewer-name">${review.name || 'User'}</h6>
+              <div class="service-review-stars">${stars}</div>
+            </div>
+          </div>
+          <div class="service-review-content">
+            <p class="service-review-message">"${review.message || ''}"</p>
+          </div>
+          <div class="service-review-footer">
+            <small class="service-review-date">Verified Customer</small>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Show no reviews message
+function showNoReviews() {
+  const container = document.getElementById('serviceReviews');
+  container.innerHTML = `
+    <div class="col-12 text-center text-muted py-5">
+      <div class="empty-service-reviews">
+        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No reviews yet</h4>
+        <p class="text-muted">Be the first to review this service!</p>
+      </div>
+    </div>`;
+}
+</script>
+
+<style>
+/* Service Review Card Styles */
+.service-review-card {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  transition: transform 0.3s ease;
+}
+
+.service-review-card:hover {
+  transform: translateY(-5px);
+}
+
+.service-review-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.service-review-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-right: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.service-review-info {
+  flex: 1;
+}
+
+.service-reviewer-name {
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+}
+
+.service-review-stars {
+  color: #ffc107;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+.service-review-content {
+  margin-bottom: 1rem;
+}
+
+.service-review-message {
+  color: #4a5568;
+  line-height: 1.6;
+  margin: 0;
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
+.service-review-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  padding-top: 0.75rem;
+}
+
+.service-review-date {
+  color: #a0aec0;
+  font-weight: 500;
+}
+
+.empty-service-reviews {
+  padding: 3rem 2rem;
+}
+
+.empty-service-reviews i {
+  opacity: 0.3;
+}
+</style>
+{% endblock %}
+
+
+

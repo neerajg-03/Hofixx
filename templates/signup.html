@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid px-0">
+  <!-- Header Section -->
+  <section class="py-5 bg-gradient-primary text-white">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 mx-auto text-center">
+          <h1 class="display-5 fw-bold mb-3">Join Hofix</h1>
+          <p class="lead">Create your account and start booking professional home services</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Signup Form -->
+  <section class="py-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 col-xl-5">
+          <div class="auth-card shadow-lg rounded-4 border-0">
+            <div class="card-body p-4 p-md-5">
+              <div class="text-center mb-4">
+                <div class="auth-icon mx-auto mb-3">
+                  <i class="fas fa-user-plus text-primary"></i>
+                </div>
+                <h3 class="fw-bold mb-2">Create Account</h3>
+                <p class="text-muted">Join thousands of satisfied customers</p>
+              </div>
+              
+              <!-- Signup Form -->
+              <form id="signupForm" class="needs-validation" novalidate>
+                    <div class="row g-3">
+                      <div class="col-12">
+                        <label class="form-label fw-semibold">Full Name</label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-user text-muted"></i>
+                          </span>
+                          <input name="name" class="form-control border-start-0" placeholder="John Doe" required />
+                        </div>
+                      </div>
+                      
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Email Address</label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-envelope text-muted"></i>
+                          </span>
+                          <input name="email" type="email" class="form-control border-start-0" placeholder="you@example.com" required />
+                        </div>
+                      </div>
+                  
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Phone Number (Optional)</label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-phone text-muted"></i>
+                          </span>
+                          <input name="phone" class="form-control border-start-0" placeholder="+91 98765 43210" />
+                        </div>
+                        <input type="hidden" name="phone_verified" id="phoneVerified" value="false" />
+                        <div class="form-text">Phone number is optional</div>
+                      </div>
+                      
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">Password</label>
+                        <div class="input-group">
+                          <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-lock text-muted"></i>
+                          </span>
+                          <input name="password" type="password" class="form-control border-start-0" placeholder="Create a strong password" required />
+                        </div>
+                      </div>
+                      
+                      <div class="col-md-6">
+                        <label class="form-label fw-semibold">I want to</label>
+                        <select name="role" class="form-select">
+                          <option value="user">Book home services</option>
+                          <option value="provider">Offer my services</option>
+                          <option value="shopkeeper">Register as shopkeeper</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div class="mb-4 mt-3">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                        <label class="form-check-label small text-muted" for="agreeTerms">
+                          I agree to the <a href="/policy#terms" target="_blank" class="text-primary">Terms of Service</a> and <a href="/policy#privacy" target="_blank" class="text-primary">Privacy Policy</a>
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                      <button class="btn btn-primary btn-lg rounded-pill" type="submit">
+                        <i class="fas fa-user-plus me-2"></i>Create Account
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+
+              <!-- Social Signup -->
+              <div class="mt-4">
+                <div class="text-center mb-3">
+                  <span class="text-muted small">Or continue with</span>
+                </div>
+                
+                <div class="d-grid gap-2">
+                  <button class="btn btn-outline-danger btn-lg rounded-pill" id="googleSignupBtn">
+                    <i class="fab fa-google me-2"></i>Continue with Google
+                  </button>
+                </div>
+              </div>
+              
+              <div class="text-center mt-4">
+                <p class="text-muted small mb-0">
+                  Already have an account? 
+                  <a href="/login" class="text-primary fw-semibold">Sign in here</a>
+                </p>
+              </div>
+              
+              <div id="signupMsg" class="mt-3 text-danger text-center"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<!-- Firebase for phone verification -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<!-- Google OAuth -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// Firebase init (signup dedicated app)
+let signupAuth = null; let signupRecaptcha = null;
+async function initSignupFirebase(){
+  try{
+    const res = await fetch('/api/firebase/config');
+    const cfg = await res.json();
+    if (cfg && cfg.apiKey) {
+      const app = firebase.initializeApp(cfg, 'signupApp');
+      signupAuth = firebase.auth(app);
+      // Recaptcha not needed since phone verification is optional
+      // signupRecaptcha = new firebase.auth.RecaptchaVerifier('signupRecaptcha', { size: 'invisible' });
+    }
+  }catch(e){ console.warn('Signup Firebase init failed', e); }
+}
+
+function normalizePhone(p){
+  if (!p) return '';
+  const digits = String(p).replace(/[^0-9]/g,'');
+  if (digits.startsWith('91') && digits.length===12) return '+'+digits;
+  if (digits.length===10) return '+91'+digits;
+  return '+'+digits;
+}
+
+document.addEventListener('DOMContentLoaded', initSignupFirebase);
+
+// Email signup form
+const form = document.getElementById('signupForm');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(form).entries());
+  // Phone verification is no longer required
+  const res = await fetch('/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  const out = await res.json();
+  if (res.ok) {
+    localStorage.setItem('token', out.access_token);
+    redirectToDashboard(data.role);
+  } else {
+    showMessage(out.message || 'Signup failed', 'error');
+  }
+});
+
+// OTP signup functionality removed - OTP disabled
+
+// Google OAuth for signup
+document.getElementById('googleSignupBtn').addEventListener('click', () => {
+  // Initialize Google Sign-In
+  google.accounts.id.initialize({
+    client_id: '695218588985-pg6cfc385ddagv1np90b3uietqsg5hvc.apps.googleusercontent.com',
+    callback: handleGoogleSignupResponse
+  });
+  
+  google.accounts.id.prompt();
+});
+
+// Handle Google OAuth response for signup
+async function handleGoogleSignupResponse(response) {
+  try {
+    const res = await fetch('/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: response.credential })
+    });
+    const result = await res.json();
+    
+    if (res.ok) {
+      localStorage.setItem('token', result.access_token);
+      redirectToDashboard(result.user.role);
+    } else {
+      showMessage(result.error || 'Google signup failed', 'error');
+    }
+  } catch (error) {
+    showMessage('Network error. Please try again.', 'error');
+  }
+}
+
+// Helper functions
+function redirectToDashboard(role) {
+  setTimeout(() => {
+    if (role === 'admin') {
+      window.location.href = '/admin';
+    } else if (role === 'provider') {
+      window.location.href = '/dashboard-provider';
+    } else {
+      window.location.href = '/dashboard/user/new';
+    }
+  }, 100);
+}
+
+function showMessage(message, type) {
+  const msgElement = document.getElementById('signupMsg');
+  msgElement.textContent = message;
+  msgElement.className = `mt-3 text-${type === 'success' ? 'success' : 'danger'} text-center`;
+}
+
+// OTP signup functions removed - OTP disabled
+</script>
+{% endblock %}
+

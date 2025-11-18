@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+{% block title %}Admin - Provider Payouts{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-3 col-lg-2 bg-dark text-white vh-100 position-fixed">
+      <div class="p-3">
+        <h5 class="mb-4">Admin Panel</h5>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link text-white" href="/admin">
+              <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="/admin/payouts">
+              <i class="fas fa-money-bill-transfer me-2"></i>Provider Payouts
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="/admin/provider-verifications">
+              <i class="fas fa-user-check me-2"></i>Provider Verifications
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4" style="margin-left: 16.666667% !important;">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+          <i class="fas fa-money-bill-transfer me-2"></i>Provider Payouts
+        </h1>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5 class="card-title text-muted">Total Payouts</h5>
+              <h3 class="text-primary" id="totalPayouts">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5 class="card-title text-muted">Pending</h5>
+              <h3 class="text-warning" id="pendingPayouts">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5 class="card-title text-muted">Completed</h5>
+              <h3 class="text-success" id="completedPayouts">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center">
+            <div class="card-body">
+              <h5 class="card-title text-muted">Total Paid</h5>
+              <h3 class="text-info" id="totalPaid">₹0</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-4">
+              <label class="form-label">Filter by Status</label>
+              <select class="form-select" id="statusFilter" onchange="loadPayouts()">
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Search Provider</label>
+              <input type="text" class="form-control" id="searchProvider" placeholder="Provider name..." onkeyup="loadPayouts()">
+            </div>
+            <div class="col-md-4 text-end">
+              <button class="btn btn-primary" onclick="loadPayouts()">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payouts Table -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Provider</th>
+                  <th>Booking ID</th>
+                  <th>Original Amount</th>
+                  <th>Commission</th>
+                  <th>Payout Amount</th>
+                  <th>Bank Details</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="payoutsTableBody">
+                <tr>
+                  <td colspan="9" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="payoutsEmpty" class="text-center py-5 d-none">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No payouts found</h5>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Payout Details Modal -->
+<div class="modal fade" id="payoutDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Payout Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="payoutDetailsContent">
+        <!-- Details will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="processPayoutBtn" onclick="processPayout()">
+          <i class="fas fa-paper-plane me-2"></i>Process Payout
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentPayoutId = null;
+
+// Helper function to get auth token
+function getAuthToken() {
+  const cookieTok = document.cookie.split('; ').find(row => row.startsWith('access_token_cookie='))?.split('=')[1];
+  if (cookieTok) return cookieTok;
+  return localStorage.getItem('token') || '';
+}
+
+// Load payout statistics
+function loadPayoutStats() {
+  const token = getAuthToken();
+  fetch('/api/payouts/stats', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById('totalPayouts').textContent = data.total_payouts || 0;
+    document.getElementById('pendingPayouts').textContent = data.pending_payouts || 0;
+    document.getElementById('completedPayouts').textContent = data.completed_payouts || 0;
+    document.getElementById('totalPaid').textContent = `₹${(data.total_payout_amount || 0).toFixed(2)}`;
+  })
+  .catch(error => {
+    console.error('Error loading payout stats:', error);
+  });
+}
+
+// Load payouts
+function loadPayouts() {
+  const token = getAuthToken();
+  const statusFilter = document.getElementById('statusFilter').value;
+  const searchTerm = document.getElementById('searchProvider').value.toLowerCase();
+  
+  fetch(`/api/payouts?status=${statusFilter}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const tbody = document.getElementById('payoutsTableBody');
+    tbody.innerHTML = '';
+    
+    if (!data.payouts || data.payouts.length === 0) {
+      document.getElementById('payoutsEmpty').classList.remove('d-none');
+      return;
+    }
+    
+    document.getElementById('payoutsEmpty').classList.add('d-none');
+    
+    // Filter by search term if provided
+    let filteredPayouts = data.payouts;
+    if (searchTerm) {
+      filteredPayouts = data.payouts.filter(p => 
+        (p.provider_name || '').toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    filteredPayouts.forEach(payout => {
+      const row = document.createElement('tr');
+      const statusBadge = getStatusBadge(payout.status);
+      const createdDate = payout.created_at ? new Date(payout.created_at).toLocaleDateString() : 'N/A';
+      
+      row.innerHTML = `
+        <td>
+          <strong>${payout.provider_name || 'Unknown'}</strong><br>
+          <small class="text-muted">${payout.provider_phone || ''}</small>
+        </td>
+        <td><code>${payout.booking_id.substring(0, 8)}...</code></td>
+        <td>₹${payout.original_amount.toFixed(2)}</td>
+        <td class="text-danger">-₹${payout.commission_amount.toFixed(2)}</td>
+        <td class="text-success"><strong>₹${payout.payout_amount.toFixed(2)}</strong></td>
+        <td>
+          <small>
+            ${payout.bank_account_number ? payout.bank_account_number.substring(payout.bank_account_number.length - 4) : 'N/A'}<br>
+            <span class="text-muted">${payout.bank_ifsc_code || ''}</span>
+          </small>
+        </td>
+        <td>${statusBadge}</td>
+        <td>${createdDate}</td>
+        <td>
+          <button class="btn btn-sm btn-info" onclick="viewPayoutDetails('${payout.id}')">
+            <i class="fas fa-eye"></i>
+          </button>
+          ${payout.status === 'pending' ? `
+            <button class="btn btn-sm btn-success" onclick="processPayoutById('${payout.id}')">
+              <i class="fas fa-paper-plane"></i> Process
+            </button>
+          ` : ''}
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  })
+  .catch(error => {
+    console.error('Error loading payouts:', error);
+    document.getElementById('payoutsTableBody').innerHTML = `
+      <tr>
+        <td colspan="9" class="text-center text-danger">
+          Error loading payouts. Please try again.
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function getStatusBadge(status) {
+  const badges = {
+    'pending': '<span class="badge bg-warning">Pending</span>',
+    'processing': '<span class="badge bg-info">Processing</span>',
+    'completed': '<span class="badge bg-success">Completed</span>',
+    'failed': '<span class="badge bg-danger">Failed</span>'
+  };
+  return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+}
+
+function viewPayoutDetails(payoutId) {
+  const token = getAuthToken();
+  fetch(`/api/payouts?status=all`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const payout = data.payouts.find(p => p.id === payoutId);
+    if (!payout) {
+      alert('Payout not found');
+      return;
+    }
+    
+    currentPayoutId = payoutId;
+    const modal = new bootstrap.Modal(document.getElementById('payoutDetailsModal'));
+    const content = document.getElementById('payoutDetailsContent');
+    const processBtn = document.getElementById('processPayoutBtn');
+    
+    content.innerHTML = `
+      <div class="row">
+        <div class="col-md-6">
+          <h6>Provider Information</h6>
+          <p><strong>Name:</strong> ${payout.provider_name || 'N/A'}</p>
+          <p><strong>Phone:</strong> ${payout.provider_phone || 'N/A'}</p>
+        </div>
+        <div class="col-md-6">
+          <h6>Payment Details</h6>
+          <p><strong>Booking ID:</strong> <code>${payout.booking_id}</code></p>
+          <p><strong>Payment ID:</strong> <code>${payout.payment_id || 'N/A'}</code></p>
+        </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-md-6">
+          <h6>Amount Breakdown</h6>
+          <table class="table table-sm">
+            <tr>
+              <td>Original Amount:</td>
+              <td class="text-end"><strong>₹${payout.original_amount.toFixed(2)}</strong></td>
+            </tr>
+            <tr>
+              <td>Commission (15%):</td>
+              <td class="text-end text-danger">-₹${payout.commission_amount.toFixed(2)}</td>
+            </tr>
+            <tr class="table-success">
+              <td><strong>Payout Amount:</strong></td>
+              <td class="text-end"><strong>₹${payout.payout_amount.toFixed(2)}</strong></td>
+            </tr>
+          </table>
+        </div>
+        <div class="col-md-6">
+          <h6>Bank Account Details</h6>
+          <p><strong>Account Holder:</strong> ${payout.bank_account_holder_name || 'N/A'}</p>
+          <p><strong>Account Number:</strong> ${payout.bank_account_number ? '****' + payout.bank_account_number.substring(payout.bank_account_number.length - 4) : 'N/A'}</p>
+          <p><strong>IFSC Code:</strong> ${payout.bank_ifsc_code || 'N/A'}</p>
+          <p><strong>Bank Name:</strong> ${payout.bank_name || 'N/A'}</p>
+        </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-md-6">
+          <h6>Status Information</h6>
+          <p><strong>Status:</strong> ${getStatusBadge(payout.status)}</p>
+          <p><strong>Created:</strong> ${payout.created_at ? new Date(payout.created_at).toLocaleString() : 'N/A'}</p>
+          ${payout.transfer_reference ? `<p><strong>Transfer Reference:</strong> <code>${payout.transfer_reference}</code></p>` : ''}
+          ${payout.transfer_date ? `<p><strong>Transfer Date:</strong> ${new Date(payout.transfer_date).toLocaleString()}</p>` : ''}
+          ${payout.failure_reason ? `<p class="text-danger"><strong>Failure Reason:</strong> ${payout.failure_reason}</p>` : ''}
+        </div>
+      </div>
+    `;
+    
+    // Show/hide process button based on status
+    if (payout.status === 'pending') {
+      processBtn.classList.remove('d-none');
+    } else {
+      processBtn.classList.add('d-none');
+    }
+    
+    modal.show();
+  })
+  .catch(error => {
+    console.error('Error loading payout details:', error);
+    alert('Error loading payout details');
+  });
+}
+
+function processPayoutById(payoutId) {
+  if (!confirm('Are you sure you want to process this payout? This will initiate a bank transfer.')) {
+    return;
+  }
+  
+  const token = getAuthToken();
+  fetch(`/api/payouts/process/${payoutId}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(async res => {
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Failed to process payout');
+      return;
+    }
+    
+    alert('Payout processed successfully! Transfer ID: ' + (data.transfer_id || 'N/A'));
+    loadPayouts();
+    loadPayoutStats();
+    
+    // Close modal if open
+    const modal = bootstrap.Modal.getInstance(document.getElementById('payoutDetailsModal'));
+    if (modal) {
+      modal.hide();
+    }
+  })
+  .catch(error => {
+    console.error('Error processing payout:', error);
+    alert('Error processing payout');
+  });
+}
+
+function processPayout() {
+  if (currentPayoutId) {
+    processPayoutById(currentPayoutId);
+  }
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+  loadPayoutStats();
+  loadPayouts();
+  
+  // Refresh every 30 seconds
+  setInterval(() => {
+    loadPayoutStats();
+    loadPayouts();
+  }, 30000);
+});
+</script>
+{% endblock %}
+
